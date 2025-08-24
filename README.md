@@ -23,8 +23,8 @@ A **production-ready AI quality assurance platform** for evaluating Large Langua
 ### Basic Setup
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd llm-evals-ts-c
+git clone https://github.com/crespoantonio/llm-evals-typescript-poc
+cd llm-evals-typescript-poc
 
 # Install dependencies
 npm install
