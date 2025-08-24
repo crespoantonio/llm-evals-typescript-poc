@@ -1,0 +1,10 @@
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "What is 15 + 27?"}], "ideal": "42"}
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "Calculate 8 × 9"}], "ideal": "72"}
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "What is 144 ÷ 12?"}], "ideal": "12"}
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "Solve: 25 - 13"}], "ideal": "12"}
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "What is 7²?"}], "ideal": "49"}
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "Calculate √64"}], "ideal": "8"}
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "What is 3 + 4 × 5?"}], "ideal": "23"}
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "Calculate (12 + 8) ÷ 4"}], "ideal": "5"}
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "What is 2³ + 3²?"}], "ideal": "17"}
+{"input": [{"role": "system", "content": "You are a helpful math tutor. Solve the following arithmetic problems and provide only the numeric answer."}, {"role": "user", "content": "Solve: 100 - 37"}], "ideal": "63"}

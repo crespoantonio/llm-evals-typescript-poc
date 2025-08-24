@@ -1,0 +1,40 @@
+{
+  "name": "llm-evals-ts",
+  "version": "1.0.0",
+  "description": "TypeScript LLM evaluation framework similar to OpenAI Evals",
+  "main": "dist/index.js",
+  "bin": {
+    "llm-eval": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/cli.ts",
+    "start": "node dist/cli.js",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["llm", "evaluation", "ai", "typescript"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/jest": "^29.0.0",
+    "@types/yargs": "^17.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "openai": "^4.0.0",
+    "yargs": "^17.0.0",
+    "yaml": "^2.0.0",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1",
+    "table": "^6.8.0"
+  }
+}

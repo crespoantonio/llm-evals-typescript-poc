@@ -1,0 +1,78 @@
+# Choice-based SQL evaluation exactly as requested
+sql:
+  id: sql.choice-based.v1
+  description: SQL evaluation using choice-based grading with template variables
+  metrics:
+    - accuracy
+    - correctness_rate
+  class: ChoiceBasedEval
+  args:
+    samples_jsonl: sql/basic.jsonl
+    grading_model: gpt-4
+    prompt: |-
+      You are comparing a submitted answer to an expert answer on a given SQL coding question. Here is the data:
+      [BEGIN DATA]
+      ************
+      [Question]: {input}
+      ************
+      [Expert]: {ideal}
+      ************
+      [Submission]: {completion}
+      ************
+      [END DATA]
+
+      Compare the content and correctness of the submitted SQL with the expert answer. Ignore any differences in whitespace, style, or output column names.
+      The submitted answer may either be correct or incorrect. Determine which case applies. Answer the question by responding with one of the following:
+        "Correct": The submitted SQL and the expert answer are semantically the same, i.e. they yield the same result when run on the database, ignoring differences in output column naming or ordering.
+        "Incorrect": The submitted SQL and the expert answer are semantically different, i.e. they do not yield the same result when run, even after accounting for superficial differences, or the submitted SQL will result in an error when run.
+    choice_strings:
+      - "Correct"
+      - "Incorrect"
+    choice_scores:
+      Correct: 1.0
+      Incorrect: 0.0
+    input_outputs:
+      input: completion
+
+# Alternative version with more detailed scoring
+sql-detailed:
+  id: sql-detailed.choice-based.v1  
+  description: SQL evaluation with more granular choice-based scoring
+  metrics:
+    - accuracy
+    - partial_credit
+  class: ChoiceBasedEval
+  args:
+    samples_jsonl: sql/basic.jsonl
+    grading_model: gpt-4
+    prompt: |-
+      You are comparing a submitted SQL answer to an expert answer. Here is the data:
+      [BEGIN DATA]
+      ************
+      [Question]: {input}
+      ************
+      [Expert]: {ideal}
+      ************
+      [Submission]: {completion}
+      ************
+      [END DATA]
+
+      Evaluate the submitted SQL against the expert answer. Consider semantic equivalence, not just syntactic similarity.
+      Choose the most appropriate response:
+      
+      "Perfect": Semantically identical, produces same results
+      "Minor Issues": Functionally correct but with minor style/efficiency differences  
+      "Major Issues": Partially correct but with significant logical problems
+      "Incorrect": Semantically different or will produce errors
+    choice_strings:
+      - "Perfect"
+      - "Minor Issues" 
+      - "Major Issues"
+      - "Incorrect"
+    choice_scores:
+      Perfect: 1.0
+      "Minor Issues": 0.8
+      "Major Issues": 0.3
+      Incorrect: 0.0
+    input_outputs:
+      input: completion

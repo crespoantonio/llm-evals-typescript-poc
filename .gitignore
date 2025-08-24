@@ -1,0 +1,247 @@
+# ==============================================================================
+# LLM Evaluation Framework - GitIgnore
+# ==============================================================================
+
+# Environment Variables & Secrets
+# ==============================================================================
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.staging
+.env.*
+
+# API Keys & Credentials
+# ==============================================================================
+**/secrets/
+**/credentials/
+**/*secret*
+**/*credential*
+**/*apikey*
+**/*api-key*
+**/*private*
+
+# Node.js & NPM
+# ==============================================================================
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Build & Distribution
+# ==============================================================================
+# TypeScript compiled output
+dist/
+build/
+out/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Logs & Temporary Files
+# ==============================================================================
+# Log files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Temporary directories
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Evaluation Results & Data
+# ==============================================================================
+# Evaluation log files (contains API responses)
+logs/*.jsonl
+logs/**/*.jsonl
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Large dataset files (uncomment if you have large datasets)
+# **/*.jsonl
+# **/*.csv
+# data/
+
+# Cost tracking files
+cost-reports/
+budget-alerts/
+
+# Development & IDE
+# ==============================================================================
+# VS Code
+.vscode/
+*.code-workspace
+
+# WebStorm/IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Operating System Files
+# ==============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Production & Deployment
+# ==============================================================================
+# Production configuration files with real credentials
+config/production.yml
+config/production.yaml
+config/production.json
+production.env
+
+# Docker
+.dockerignore
+Dockerfile.prod
+
+# Kubernetes
+k8s/secrets/
+k8s/**/*secret*
+
+# SSL Certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# Test & Development
+# ==============================================================================
+# Test coverage reports
+coverage/
+*.coverage
+htmlcov/
+
+# Jest
+.jest/
+
+# Test artifacts
+test-results/
+test-reports/
+test-logs/
+
+# Performance monitoring
+.clinic/
+*.clinic.*
+
+# Analytics & Monitoring
+# ==============================================================================
+# Dashboard artifacts
+dashboard-cache/
+analytics-cache/
+
+# Monitoring data
+monitoring-data/
+alert-history/
+
+# Custom & Project Specific
+# ==============================================================================
+# Custom evaluation data (if sensitive)
+# registry/data/sensitive/
+# registry/data/proprietary/
+
+# User-specific registry data
+my-registry/
+personal-registry/
+custom-registry/
+
+# Local development files
+local/
+dev/
+sandbox/
+
+# Documentation builds
+docs/build/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# Temporary registry for testing
+temp-registry/
+test-registry/
+
+# ==============================================================================
+# Notes:
+# - Uncomment lines if you have sensitive datasets
+# - Add specific file patterns for your organization's secrets
+# - Review before first commit to ensure no sensitive data is included
+# ==============================================================================

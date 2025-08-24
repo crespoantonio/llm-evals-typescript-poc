@@ -1,0 +1,256 @@
+# Production-ready evaluation configuration
+# This shows how all the new features work together
+
+# Global settings
+global:
+  dashboard:
+    enabled: true
+    port: 3000
+    auth:
+      enabled: true
+      api_keys: ["prod-key-123", "staging-key-456"]
+  
+  database:
+    type: sqlite
+    path: "./data/production.db"
+    backup_interval_hours: 6
+  
+  cost_management:
+    budgets:
+      safety_evaluations: 50.00  # $50/month budget
+      performance_evals: 100.00  # $100/month budget  
+      experimental_tests: 25.00  # $25/month budget
+    alerts:
+      budget_warning_threshold: 0.75  # 75%
+      budget_exceeded_threshold: 0.95  # 95%
+
+# Monitoring and alerting rules
+monitoring:
+  alerts:
+    - id: performance_degradation
+      name: "Model Performance Drop"
+      condition:
+        type: score_drop
+        threshold: 0.10  # 10% drop
+        time_window_minutes: 120
+        evaluations: ["safety", "helpfulness", "accuracy"]
+      actions:
+        - type: slack
+          config:
+            webhook_url: "${SLACK_WEBHOOK_URL}"
+            channel: "#ml-alerts"
+        - type: email
+          config:
+            to: ["team@company.com", "cto@company.com"]
+      severity: high
+      cooldown_minutes: 60
+
+    - id: high_cost_spike  
+      name: "Evaluation Cost Spike"
+      condition:
+        type: cost_spike
+        threshold: 2.0  # 2x normal cost
+        time_window_minutes: 60
+      actions:
+        - type: slack
+          config:
+            channel: "#budget-alerts"
+      severity: medium
+      cooldown_minutes: 30
+
+# Automated evaluation pipelines
+pipelines:
+  # Production deployment gate
+  - name: "Production Deployment Gate"
+    trigger:
+      type: webhook
+      config:
+        endpoint: "/api/pipelines/production-gate"
+        auth_required: true
+    
+    evaluations:
+      - safety_comprehensive
+      - helpfulness_v2
+      - factual_accuracy
+      - bias_detection
+    
+    models:
+      - gpt-4
+      - claude-3-sonnet
+    
+    quality_gates:
+      - name: "Minimum Safety Score"
+        condition:
+          type: min_score
+          threshold: 0.95  # 95% required for production
+          evaluations: ["safety_comprehensive"]
+        action: fail
+        required: true
+      
+      - name: "Helpfulness Baseline"
+        condition:
+          type: min_score  
+          threshold: 0.80  # 80% helpfulness minimum
+          evaluations: ["helpfulness_v2"]
+        action: warn
+        required: false
+      
+      - name: "Cost Control"
+        condition:
+          type: max_cost
+          threshold: 10.00  # Max $10 per deployment check
+        action: warn
+        required: false
+      
+      - name: "Performance Regression"
+        condition:
+          type: max_regression
+          threshold: 0.05  # Max 5% regression vs baseline
+        action: fail
+        required: true
+
+    notifications:
+      - type: github_status
+        config:
+          repo: "company/ai-models"
+          context: "evaluation/production-gate"
+        trigger_on: [success, failure]
+      
+      - type: slack
+        config:
+          channel: "#deployments"
+        trigger_on: [success, failure, warning]
+
+  # Nightly comprehensive evaluation
+  - name: "Nightly Model Evaluation"
+    trigger:
+      type: schedule
+      config:
+        cron: "0 2 * * *"  # 2 AM daily
+    
+    evaluations:
+      - safety_comprehensive
+      - helpfulness_v2  
+      - factual_accuracy
+      - bias_detection
+      - creative_writing
+      - reasoning_tasks
+      - code_generation
+    
+    models:
+      - gpt-4
+      - gpt-3.5-turbo
+      - claude-3-opus
+      - claude-3-sonnet
+    
+    parallel_execution: true
+    max_retries: 2
+    
+    quality_gates:
+      - name: "Overall Performance"
+        condition:
+          type: min_score
+          threshold: 0.75  # 75% overall minimum
+        action: warn
+        required: false
+
+    notifications:
+      - type: email
+        config:
+          to: ["ai-team@company.com"]
+          template: "nightly_report"
+        trigger_on: [success, failure]
+      
+      - type: slack
+        config:
+          channel: "#ai-metrics"
+          include_charts: true
+        trigger_on: [success, warning, failure]
+
+  # Weekly model comparison
+  - name: "Weekly Model Comparison"  
+    trigger:
+      type: schedule
+      config:
+        cron: "0 9 * * 1"  # 9 AM every Monday
+    
+    type: comparison
+    config:
+      models: ["gpt-4", "claude-3-opus", "gemini-pro"]
+      evaluations: ["safety", "helpfulness", "accuracy"]
+      sample_size: 100
+      confidence_level: 0.95
+      statistical_test: "ttest"
+
+    notifications:
+      - type: email
+        config:
+          to: ["leadership@company.com"]
+          template: "weekly_comparison"
+        trigger_on: [success]
+
+# Dashboard configuration  
+dashboard:
+  widgets:
+    - type: performance_trends
+      title: "Model Performance Over Time"
+      evaluations: ["safety", "helpfulness", "accuracy"]
+      time_range: "30d"
+      
+    - type: cost_tracking
+      title: "Evaluation Costs"
+      breakdown_by: ["model", "evaluation"]
+      time_range: "30d"
+      
+    - type: alert_status
+      title: "Recent Alerts"
+      max_items: 10
+      
+    - type: pipeline_status  
+      title: "Pipeline History"
+      max_items: 5
+      
+    - type: model_comparison
+      title: "Model Leaderboard"
+      evaluations: ["overall_score"]
+      update_interval: "1h"
+
+# A/B testing configurations
+ab_testing:
+  experiments:
+    - name: "GPT-4 vs Claude-3 Safety"
+      models: ["gpt-4", "claude-3-opus"]
+      evaluations: ["safety_comprehensive"]
+      sample_size: 200
+      confidence_level: 0.95
+      duration_days: 7
+      
+    - name: "Cost vs Performance Trade-off"
+      models: ["gpt-4", "gpt-3.5-turbo"]  
+      evaluations: ["helpfulness_v2", "factual_accuracy"]
+      sample_size: 500
+      include_cost_analysis: true
+
+# Integration settings
+integrations:
+  github:
+    enabled: true
+    repo: "company/ai-models"
+    token: "${GITHUB_TOKEN}"
+    
+  slack:
+    enabled: true
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    default_channel: "#ai-alerts"
+    
+  email:
+    enabled: true
+    smtp_host: "${SMTP_HOST}"
+    smtp_port: 587
+    username: "${SMTP_USERNAME}"
+    password: "${SMTP_PASSWORD}"
+    
+  datadog:
+    enabled: true
+    api_key: "${DATADOG_API_KEY}"
+    metrics_prefix: "llm_evals"

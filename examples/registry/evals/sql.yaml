@@ -1,0 +1,70 @@
+# SQL generation evaluation examples
+sql-basic:
+  id: sql-basic.dev.v0
+  description: Basic SQL generation with exact matching
+  metrics: [accuracy]
+  class: BasicEval
+  args:
+    samples_jsonl: sql/basic.jsonl
+    match_type: fuzzy
+    case_sensitive: false
+
+sql-basic.dev.v0:
+  id: sql-basic.dev.v0
+  description: Basic SQL generation with exact matching
+  metrics: [accuracy]
+  class: BasicEval
+  args:
+    samples_jsonl: sql/basic.jsonl
+    match_type: fuzzy
+    case_sensitive: false
+
+sql-graded:
+  id: sql-graded.dev.v0
+  description: SQL generation with model-graded evaluation for semantic correctness
+  disclaimer: SQL is not executed; evaluation is based on LLM judgment which may have false positives/negatives
+  metrics: [accuracy]
+  class: ModelGradedEval
+  args:
+    samples_jsonl: sql/complex.jsonl
+    eval_type: cot_classify
+    grading_model: gpt-4
+    grading_prompt: |
+      You are an expert SQL evaluator. Compare the generated SQL to the expected SQL.
+      Focus on semantic correctness rather than exact syntax matching.
+      Consider:
+      - Does the query solve the same problem?
+      - Are the joins and conditions logically equivalent?
+      - Does it return the same result set?
+      
+      Score from 0.0 to 1.0:
+      - 1.0: Semantically equivalent or better
+      - 0.8-0.9: Minor syntax differences but correct logic
+      - 0.6-0.7: Mostly correct but some inefficiencies
+      - 0.4-0.5: Partially correct approach
+      - 0.0-0.3: Incorrect or won't work
+
+sql-graded.dev.v0:
+  id: sql-graded.dev.v0
+  description: SQL generation with model-graded evaluation for semantic correctness
+  disclaimer: SQL is not executed; evaluation is based on LLM judgment which may have false positives/negatives
+  metrics: [accuracy]
+  class: ModelGradedEval
+  args:
+    samples_jsonl: sql/complex.jsonl
+    eval_type: cot_classify
+    grading_model: gpt-4
+    grading_prompt: |
+      You are an expert SQL evaluator. Compare the generated SQL to the expected SQL.
+      Focus on semantic correctness rather than exact syntax matching.
+      Consider:
+      - Does the query solve the same problem?
+      - Are the joins and conditions logically equivalent?
+      - Does it return the same result set?
+      
+      Score from 0.0 to 1.0:
+      - 1.0: Semantically equivalent or better
+      - 0.8-0.9: Minor syntax differences but correct logic
+      - 0.6-0.7: Mostly correct but some inefficiencies
+      - 0.4-0.5: Partially correct approach
+      - 0.0-0.3: Incorrect or won't work
