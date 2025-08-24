@@ -61,12 +61,110 @@ export class OpenAIClient implements LLMClient {
 }
 
 /**
+ * Ollama client implementation for local models
+ */
+export class OllamaClient implements LLMClient {
+  private model: string;
+  private baseUrl: string;
+
+  constructor(model: string = 'llama2', baseUrl: string = 'http://localhost:11434') {
+    this.model = model.replace('ollama/', ''); // Remove ollama/ prefix if present
+    this.baseUrl = baseUrl;
+  }
+
+  async complete(messages: ChatMessage[], options?: CompletionOptions): Promise<CompletionResult> {
+    try {
+      // Convert messages to Ollama format
+      const prompt = this.formatMessagesAsPrompt(messages);
+      
+      const response = await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          prompt: prompt,
+          stream: false,
+          options: {
+            temperature: options?.temperature ?? 0.0,
+            num_predict: options?.max_tokens,
+            top_p: options?.top_p,
+            frequency_penalty: options?.frequency_penalty,
+            presence_penalty: options?.presence_penalty,
+            stop: options?.stop,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ollama API error: ${response.status} ${errorText}`);
+      }
+
+      const data = await response.json() as {
+        response: string;
+        prompt_eval_count?: number;
+        eval_count?: number;
+        done?: boolean;
+      };
+      
+      if (!data.response) {
+        throw new Error('Empty response from Ollama');
+      }
+
+      return {
+        content: data.response,
+        usage: {
+          prompt_tokens: data.prompt_eval_count || 0,
+          completion_tokens: data.eval_count || 0,
+          total_tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
+        },
+        model: this.model,
+        finish_reason: data.done ? 'stop' : undefined,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('fetch')) {
+        throw new Error(`Failed to connect to Ollama at ${this.baseUrl}. Make sure Ollama is running with: ollama serve`);
+      }
+      throw new Error(`Ollama completion failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  getModel(): string {
+    return this.model;
+  }
+
+  private formatMessagesAsPrompt(messages: ChatMessage[]): string {
+    // Simple prompt formatting for Ollama
+    return messages
+      .map(msg => {
+        switch (msg.role) {
+          case 'system':
+            return `System: ${msg.content}`;
+          case 'user':
+            return `Human: ${msg.content}`;
+          case 'assistant':
+            return `Assistant: ${msg.content}`;
+          default:
+            return msg.content;
+        }
+      })
+      .join('\n\n') + '\n\nAssistant:';
+  }
+}
+
+/**
  * Factory function to create LLM clients
  */
 export function createLLMClient(model: string): LLMClient {
   // Determine provider from model name
   if (model.startsWith('gpt-') || model.startsWith('o1-')) {
     return new OpenAIClient(model);
+  }
+  
+  if (model.startsWith('ollama/') || model.includes('ollama')) {
+    return new OllamaClient(model);
   }
   
   // Add more providers here as needed
