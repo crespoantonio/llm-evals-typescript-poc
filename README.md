@@ -6,7 +6,7 @@ A **production-ready AI quality assurance platform** for evaluating Large Langua
 
 ### **Core Evaluation Engine**
 - 🎯 **Multiple Evaluation Types**: Basic deterministic matching, model-graded evaluations, and structured choice-based grading
-- 🔧 **Multi-Provider LLM Support**: Built-in support for OpenAI models, extensible for Anthropic, local models, and custom providers
+- 🔧 **Multi-Provider LLM Support**: Built-in support for OpenAI, Ollama (local models), HuggingFace (100,000+ community models), extensible for Anthropic and custom providers
 - ⚙️ **YAML Configuration**: Declarative evaluation definitions with flexible templating
 - 🚀 **CLI Interface**: Powerful command-line tool with dry-run, verbose logging, and batch processing
 
@@ -31,6 +31,26 @@ npm install
 
 # Build the project
 npm run build
+```
+
+### API Keys Setup
+```bash
+# Copy environment template
+cp env.example .env
+
+# Edit .env with your API keys:
+# OPENAI_API_KEY=sk-your-openai-key-here                    # For OpenAI models
+# HUGGINGFACE_API_KEY=hf_your-huggingface-token-here        # For HF models (optional)
+# ANTHROPIC_API_KEY=your-anthropic-key-here                 # For Claude models (optional)
+```
+
+### Local Models Setup (Optional)
+```bash
+# For Ollama local models:
+# 1. Install Ollama from https://ollama.ai
+# 2. Pull a model: ollama pull llama2
+# 3. Start server: ollama serve
+# 4. Use: npx ts-node src/cli.ts ollama/llama2 math-basic
 ```
 
 ### Production Features (Optional)
@@ -68,6 +88,11 @@ npx ts-node src/cli.ts gpt-3.5-turbo math-basic --max-samples 5
 # 📊 Loading dataset from: registry/data/math/basic.jsonl
 # ⏳ Progress: 5/5 (100%)
 # 🎯 Final Score: 80.0%
+
+# 5. Try different model providers
+npx ts-node src/cli.ts ollama/llama2 math-basic --max-samples 3          # Local models (free)
+npx ts-node src/cli.ts hf/google/flan-t5-large math-basic --max-samples 3 # HuggingFace models
+npx ts-node src/cli.ts gpt-4 math-basic --max-samples 3                  # OpenAI models
 ```
 
 ### Production Features Quick Start
@@ -248,6 +273,28 @@ npx ts-node src/cli.ts list
 npx ts-node src/cli.ts init [path]
 ```
 
+### **Supported Model Providers**
+
+The framework automatically detects the provider based on the model name:
+
+```bash
+# OpenAI Models (requires OPENAI_API_KEY)
+npx ts-node src/cli.ts gpt-3.5-turbo math-basic
+npx ts-node src/cli.ts gpt-4 sql-graded
+npx ts-node src/cli.ts o1-preview math-basic
+
+# Ollama Local Models (requires Ollama server: ollama serve)  
+npx ts-node src/cli.ts ollama/llama2 math-basic
+npx ts-node src/cli.ts ollama/codellama sql-basic
+npx ts-node src/cli.ts ollama/mistral toxicity
+
+# HuggingFace Models (optional HUGGINGFACE_API_KEY for better performance)
+npx ts-node src/cli.ts hf/google/flan-t5-large math-basic
+npx ts-node src/cli.ts hf/microsoft/DialoGPT-large toxicity
+npx ts-node src/cli.ts hf/codellama/CodeLlama-7b-Instruct-hf sql-basic
+npx ts-node src/cli.ts hf/distilgpt2 math-basic  # Lightweight for testing
+```
+
 ### **CLI Options**
 
 - `--max-samples, -m`: Limit number of samples to evaluate
@@ -261,8 +308,10 @@ npx ts-node src/cli.ts init [path]
 ### **Examples**
 
 ```bash
-# Basic evaluation
-npx ts-node src/cli.ts gpt-3.5-turbo math-basic --max-samples 10
+# Basic evaluation with different providers
+npx ts-node src/cli.ts gpt-3.5-turbo math-basic --max-samples 10          # OpenAI
+npx ts-node src/cli.ts ollama/llama2 math-basic --max-samples 10           # Local Ollama
+npx ts-node src/cli.ts hf/google/flan-t5-large math-basic --max-samples 10 # HuggingFace
 
 # Advanced evaluation with full logging
 npx ts-node src/cli.ts gpt-4 safety-comprehensive \
@@ -270,15 +319,18 @@ npx ts-node src/cli.ts gpt-4 safety-comprehensive \
   --verbose \
   --log-to-file safety-results.jsonl
 
-# Test configuration without API costs
-npx ts-node src/cli.ts gpt-4 sql-choice-based --dry-run --verbose
+# Test configuration without API costs (works with any provider)
+npx ts-node src/cli.ts ollama/llama2 sql-choice-based --dry-run --verbose
+npx ts-node src/cli.ts hf/distilgpt2 math-basic --dry-run --verbose
 
-# Compare multiple models (A/B testing)
+# Compare multiple models across providers (A/B testing)
 npx ts-node src/cli.ts gpt-4 safety --max-samples 100 --log-to-file gpt4-safety.jsonl
-npx ts-node src/cli.ts claude-3-sonnet safety --max-samples 100 --log-to-file claude-safety.jsonl
+npx ts-node src/cli.ts ollama/llama2 safety --max-samples 100 --log-to-file llama2-safety.jsonl
+npx ts-node src/cli.ts hf/google/flan-t5-large safety --max-samples 100 --log-to-file flan-t5-safety.jsonl
 
-# Run toxicity evaluation with model grading
+# Run toxicity evaluation with different grading models
 npx ts-node src/cli.ts gpt-4 toxicity --max-samples 25 --verbose
+npx ts-node src/cli.ts hf/microsoft/DialoGPT-large toxicity --max-samples 25 --verbose
 ```
 
 ## 🔧 Programmatic Usage
@@ -464,7 +516,30 @@ console.log('  GET /api/compare?models=gpt-4,claude-3 - Model comparison');
 console.log('  GET /api/failures/run_123 - Failure analysis');
 ```
 
+### **Built-in Model Support**
+
+The framework includes native support for multiple LLM providers:
+
+```typescript
+// Built-in providers work automatically
+import { createLLMClient } from './src/llm-client';
+
+// OpenAI models (cloud-based, paid)
+const openaiClient = createLLMClient('gpt-4');
+const gpt35Client = createLLMClient('gpt-3.5-turbo');
+
+// Ollama models (local, free)
+const llamaClient = createLLMClient('ollama/llama2');
+const codelamaClient = createLLMClient('ollama/codellama');
+
+// HuggingFace models (community, free tier available)
+const flanClient = createLLMClient('hf/google/flan-t5-large');
+const dialogClient = createLLMClient('hf/microsoft/DialoGPT-large');
+```
+
 ### **Custom LLM Clients**
+
+You can easily add support for additional providers:
 
 ```typescript
 import { LLMClient, ChatMessage, CompletionResult } from './src';
@@ -505,12 +580,12 @@ class AnthropicClient implements LLMClient {
   }
 }
 
-// Register custom client
+// Register custom client in createLLMClient function
 export function createLLMClient(model: string): LLMClient {
   if (model.startsWith('claude-')) {
     return new AnthropicClient(model, process.env.ANTHROPIC_API_KEY!);
   }
-  // ... existing providers
+  // ... existing providers (OpenAI, Ollama, HuggingFace)
 }
 ```
 
@@ -702,6 +777,11 @@ const customQualityGate: QualityGate = {
 - **[PRODUCTION_SETUP.md](PRODUCTION_SETUP.md)**: Production deployment and optional dependencies setup
 - **[PRODUCTION_FEATURES.md](PRODUCTION_FEATURES.md)**: Overview of enterprise-grade features
 
+### **Model Provider Setup Guides**
+- **[docs/OLLAMA_SETUP.md](docs/OLLAMA_SETUP.md)**: Complete guide for local model evaluation with Ollama
+- **[docs/HUGGINGFACE_SETUP.md](docs/HUGGINGFACE_SETUP.md)**: Guide for using HuggingFace community models
+- **[docs/EXTENDING_MODELS.md](docs/EXTENDING_MODELS.md)**: How to add support for new LLM providers
+
 ### **Example Configurations**
 - **`examples/production-config.yaml`**: Production pipeline configuration
 - **`examples/toxicity-testing-guide.md`**: Safety evaluation setup
@@ -710,9 +790,10 @@ const customQualityGate: QualityGate = {
 
 ### **Getting Started Path**
 1. **🎯 Start Here**: Follow the [Quick Start](#-quick-start) section above
-2. **📖 Deep Dive**: Read [FRAMEWORK_EXPLAINED.md](FRAMEWORK_EXPLAINED.md) for complete understanding
-3. **🏗️ Build Custom**: Use [CUSTOM_EVALS_GUIDE.md](CUSTOM_EVALS_GUIDE.md) for advanced features
-4. **🚀 Production**: Deploy with [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md)
+2. **🤖 Choose Models**: Set up [OpenAI](https://platform.openai.com/api-keys), [Ollama](docs/OLLAMA_SETUP.md), or [HuggingFace](docs/HUGGINGFACE_SETUP.md) models
+3. **📖 Deep Dive**: Read [FRAMEWORK_EXPLAINED.md](FRAMEWORK_EXPLAINED.md) for complete understanding
+4. **🏗️ Build Custom**: Use [CUSTOM_EVALS_GUIDE.md](CUSTOM_EVALS_GUIDE.md) for advanced features
+5. **🚀 Production**: Deploy with [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md)
 
 ## 🎯 Use Cases & Industries
 
@@ -751,10 +832,11 @@ const customQualityGate: QualityGate = {
 
 ### **Community Contributions Welcome**
 - New evaluation templates for domain-specific use cases
-- LLM provider integrations (Gemini, Cohere, local models)
+- LLM provider integrations (Gemini, Cohere, additional local model frameworks)
 - Enhanced statistical analysis methods
 - Dashboard visualizations and widgets
 - Integration plugins for development tools
+- Model-specific optimization and prompt engineering
 
 ## License
 

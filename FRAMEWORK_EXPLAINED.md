@@ -140,7 +140,7 @@ export interface EvalResult {
 
 ### 🤖 LLM Client (`src/llm-client.ts`)
 
-**What it is:** The code that talks to AI models (like ChatGPT).
+**What it is:** The code that talks to AI models (like ChatGPT, local models, and HuggingFace models).
 
 **How it works:**
 ```typescript
@@ -173,7 +173,164 @@ export class OpenAIClient implements LLMClient {
 }
 ```
 
-**Why it's designed this way:** By using an interface (`LLMClient`), we can easily add support for different AI models (Claude, Gemini, etc.) without changing the rest of our code.
+**Why it's designed this way:** By using an interface (`LLMClient`), we can easily add support for different AI models without changing the rest of our code.
+
+#### **Ollama Client (Local Models)**
+
+**What it is:** Integration with Ollama for running AI models locally on your computer.
+
+**Key benefits:**
+- **Free**: No API costs, unlimited testing
+- **Private**: All data stays on your machine  
+- **Offline**: Works without internet connection
+- **Custom Models**: Use your own fine-tuned models
+
+```typescript
+export class OllamaClient implements LLMClient {
+  private model: string;
+  private baseUrl: string = 'http://localhost:11434'; // Default Ollama server
+
+  async complete(messages: ChatMessage[]): Promise<CompletionResult> {
+    // Convert chat messages to a prompt format Ollama understands
+    const prompt = this.formatMessagesAsPrompt(messages);
+    
+    // Send request to local Ollama server
+    const response = await fetch(`${this.baseUrl}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: this.model,
+        prompt: prompt,
+        stream: false // Get complete response at once
+      })
+    });
+    
+    const data = await response.json();
+    return {
+      content: data.response,
+      usage: {
+        prompt_tokens: data.prompt_eval_count || 0,
+        completion_tokens: data.eval_count || 0,
+        total_tokens: (data.prompt_eval_count || 0) + (data.eval_count || 0)
+      },
+      model: this.model
+    };
+  }
+}
+```
+
+**Usage examples:**
+```bash
+# Run with Llama2 model
+npx ts-node src/cli.ts ollama/llama2 math-basic --max-samples 5
+
+# Run with CodeLlama for programming tasks  
+npx ts-node src/cli.ts ollama/codellama sql-basic --verbose
+
+# Test any configuration without starting Ollama
+npx ts-node src/cli.ts ollama/any-model math-basic --dry-run
+```
+
+#### **HuggingFace Client (Community Models)**
+
+**What it is:** Integration with HuggingFace Inference API for access to 100,000+ community models.
+
+**Key benefits:**
+- **Huge Selection**: 100,000+ models from the community
+- **Free Tier**: Many models work without API keys
+- **Specialized Models**: Domain-specific fine-tuned models
+- **Cutting Edge**: Latest research models appear here first
+
+```typescript
+export class HuggingFaceClient implements LLMClient {
+  private model: string;
+  private apiKey?: string;
+  private baseUrl = 'https://api-inference.huggingface.co/models';
+
+  async complete(messages: ChatMessage[]): Promise<CompletionResult> {
+    // Convert messages to prompt format for HF models
+    const prompt = this.formatMessagesAsPrompt(messages);
+    
+    // Send request to HuggingFace Inference API
+    const response = await fetch(`${this.baseUrl}/${this.model}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
+      },
+      body: JSON.stringify({
+        inputs: prompt,
+        parameters: {
+          temperature: 0.7,
+          max_new_tokens: 256,
+          return_full_text: false
+        }
+      })
+    });
+    
+    const data = await response.json();
+    return {
+      content: data[0].generated_text,
+      usage: {
+        prompt_tokens: Math.ceil(prompt.length / 4), // Estimated
+        completion_tokens: Math.ceil(data[0].generated_text.length / 4),
+        total_tokens: Math.ceil((prompt.length + data[0].generated_text.length) / 4)
+      },
+      model: this.model
+    };
+  }
+}
+```
+
+**Usage examples:**
+```bash
+# Popular instruction-following models
+npx ts-node src/cli.ts hf/google/flan-t5-large math-basic
+npx ts-node src/cli.ts hf/microsoft/DialoGPT-large toxicity --max-samples 3
+
+# Code generation models
+npx ts-node src/cli.ts hf/codellama/CodeLlama-7b-Instruct-hf sql-basic
+npx ts-node src/cli.ts hf/Salesforce/codegen-350M-mono math-basic
+
+# Quick testing with lightweight models
+npx ts-node src/cli.ts hf/distilgpt2 math-basic --max-samples 5
+npx ts-node src/cli.ts hf/gpt2 toxicity --max-samples 3
+```
+
+#### **Universal Model Factory**
+
+The framework automatically detects which provider to use based on the model name:
+
+```typescript
+export function createLLMClient(model: string): LLMClient {
+  // OpenAI models
+  if (model.startsWith('gpt-') || model.startsWith('o1-')) {
+    return new OpenAIClient(model);
+  }
+  
+  // Ollama local models  
+  if (model.startsWith('ollama/') || model.includes('ollama')) {
+    return new OllamaClient(model);
+  }
+  
+  // HuggingFace models
+  if (model.startsWith('hf/') || model.includes('huggingface.co')) {
+    return new HuggingFaceClient(model);
+  }
+  
+  // Default to OpenAI
+  console.warn(`Unknown model provider for ${model}, defaulting to OpenAI`);
+  return new OpenAIClient(model);
+}
+```
+
+**This means the same evaluation can run on any model:**
+```bash
+# Same evaluation, different providers
+npx ts-node src/cli.ts gpt-4 math-basic              # OpenAI (cloud)
+npx ts-node src/cli.ts ollama/llama2 math-basic      # Local (free)
+npx ts-node src/cli.ts hf/flan-t5-large math-basic   # HuggingFace (community)
+```
 
 ---
 

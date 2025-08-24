@@ -41,11 +41,20 @@ npx ts-node src/cli.ts ollama/codellama sql-basic
 npx ts-node src/cli.ts ollama/mistral math-basic
 ```
 
-### Hugging Face
+### Hugging Face (✅ Ready to use)
 ```bash
-# After adding HuggingFaceClient:
+# Popular instruction-following models:
+npx ts-node src/cli.ts hf/google/flan-t5-large math-basic
 npx ts-node src/cli.ts hf/microsoft/DialoGPT-large math-basic
-npx ts-node src/cli.ts hf/codellama/CodeLlama-7b-hf sql-basic
+npx ts-node src/cli.ts hf/bigscience/bloom-1b1 sql-basic
+
+# Code generation models:
+npx ts-node src/cli.ts hf/codellama/CodeLlama-7b-Instruct-hf sql-basic
+npx ts-node src/cli.ts hf/Salesforce/codegen-350M-mono math-basic
+
+# Quick testing models:
+npx ts-node src/cli.ts hf/distilgpt2 math-basic --max-samples 5
+npx ts-node src/cli.ts hf/gpt2 toxicity --max-samples 3
 ```
 
 ### Custom/Enterprise APIs
