@@ -484,10 +484,16 @@ Metric measuring model performance across all classification thresholds. Higher 
 Metric for evaluating machine translation quality by comparing n-gram overlap with reference translations.
 
 ### **Cosine Similarity**
-Measure of similarity between two vectors based on the cosine of the angle between them. Used in semantic similarity tasks.
+Measure of similarity between two vectors based on the cosine of the angle between them. Used in semantic similarity tasks. Ranges from -1 (opposite) to 1 (identical), with 0 being orthogonal/unrelated.
 
 ### **Edit Distance**
 The minimum number of operations needed to transform one string into another. Used in fuzzy matching algorithms.
+
+### **Embeddings**
+Dense vector representations of text that capture semantic meaning. Words or sentences with similar meanings have similar embeddings. Used in semantic similarity evaluation.
+
+### **Embedding Vector**
+A numerical representation (array of numbers) that captures the semantic meaning of text. Typically 384, 768, or 1536 dimensions depending on the model.
 
 ### **Exact Match Accuracy**
 Percentage of predictions that match the expected answer exactly, without any tolerance for variations.
@@ -527,6 +533,43 @@ The number of evaluations or API calls processed per unit of time (e.g., samples
 
 ### **Weighted Average**
 Averaging metrics with weights proportional to class frequency. Gives more importance to frequent classes.
+
+---
+
+## 🧠 Semantic Similarity Terms
+
+### **All Mode**
+SemanticSimilarityEval match mode requiring ALL ideal answers to meet the similarity threshold. Uses average similarity and strictest evaluation.
+
+### **Best Mode**
+SemanticSimilarityEval match mode that finds the highest similarity among ideal answers. Uses the best match for scoring.
+
+### **Embedding Cache**
+Storage system for computed embeddings to avoid recomputation and reduce API costs in semantic similarity evaluation.
+
+### **Embedding Provider**
+Service that generates embeddings from text. Framework supports OpenAI (cloud) and local (mock) providers.
+
+### **HuggingFaceEmbeddings**
+Community embedding models available through HuggingFace, offering free tiers and specialized domain models.
+
+### **Match Mode**
+Configuration in SemanticSimilarityEval determining how to evaluate against multiple ideal answers: 'best', 'threshold', or 'all'.
+
+### **OpenAI Embeddings**
+High-quality embedding service from OpenAI. Models include text-embedding-3-small (fast, cheap) and text-embedding-3-large (accurate, expensive).
+
+### **Semantic Threshold**
+Minimum similarity score (0.0-1.0) required for semantic similarity evaluation to pass. Higher values are stricter.
+
+### **Similarity Score**
+Numerical value (0.0-1.0) indicating how semantically similar two pieces of text are. Calculated using cosine similarity of embeddings.
+
+### **Threshold Mode**
+SemanticSimilarityEval match mode where evaluation passes if ANY ideal answer meets the similarity threshold. More lenient than 'all' mode.
+
+### **Vector Normalization**
+Mathematical process of scaling embedding vectors to unit length, ensuring cosine similarity calculations are accurate and comparable.
 
 ---
 

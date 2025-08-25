@@ -155,6 +155,18 @@ export interface ChoiceBasedEvalArgs {
 }
 
 /**
+ * Semantic similarity evaluation template configuration
+ */
+export interface SemanticSimilarityEvalArgs {
+  samples_jsonl: string;
+  threshold?: number; // Minimum similarity score to pass (0.0-1.0)
+  embeddings_provider?: 'openai' | 'local'; // Which embeddings service to use
+  embeddings_model?: string; // Specific model for embeddings
+  match_mode?: 'best' | 'threshold' | 'all'; // How to evaluate against multiple ideal answers
+  cache_embeddings?: boolean; // Whether to cache embeddings for reuse
+}
+
+/**
  * CLI run options
  */
 export interface RunOptions {

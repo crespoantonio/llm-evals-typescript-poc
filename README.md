@@ -5,7 +5,7 @@ A **production-ready AI quality assurance platform** for evaluating Large Langua
 ## 🌟 Features
 
 ### **Core Evaluation Engine**
-- 🎯 **Multiple Evaluation Types**: Basic deterministic matching, model-graded evaluations, and structured choice-based grading
+- 🎯 **Multiple Evaluation Types**: Basic deterministic matching, model-graded evaluations, structured choice-based grading, and semantic similarity evaluation
 - 🔧 **Multi-Provider LLM Support**: Built-in support for OpenAI, Ollama (local models), HuggingFace (100,000+ community models), extensible for Anthropic and custom providers
 - ⚙️ **YAML Configuration**: Declarative evaluation definitions with flexible templating
 - 🚀 **CLI Interface**: Powerful command-line tool with dry-run, verbose logging, and batch processing
@@ -190,6 +190,15 @@ sql-choice:
     choice_strings: ["Correct", "Incorrect"]
     choice_scores: {"Correct": 1.0, "Incorrect": 0.0}
     grading_model: gpt-4
+
+# Semantic Similarity Evaluations - Meaning-based evaluation using embeddings
+semantic-qa:
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/qa.jsonl
+    threshold: 0.8                    # Similarity threshold (0.0-1.0)
+    embeddings_provider: openai       # openai or local
+    match_mode: best                  # best, threshold, or all
 ```
 
 ### **Production & Enterprise Features**
@@ -331,6 +340,11 @@ npx ts-node src/cli.ts hf/google/flan-t5-large safety --max-samples 100 --log-to
 # Run toxicity evaluation with different grading models
 npx ts-node src/cli.ts gpt-4 toxicity --max-samples 25 --verbose
 npx ts-node src/cli.ts hf/microsoft/DialoGPT-large toxicity --max-samples 25 --verbose
+
+# Run semantic similarity evaluations (meaning-based)
+npx ts-node src/cli.ts gpt-3.5-turbo semantic-basic --max-samples 10 --verbose
+npx ts-node src/cli.ts gpt-4 semantic-qa --max-samples 15
+npx ts-node src/cli.ts ollama/llama2 semantic-local --max-samples 5  # Free, local embeddings
 ```
 
 ## 🔧 Programmatic Usage
@@ -638,6 +652,7 @@ All evaluations demonstrate different evaluation patterns:
 - **Fuzzy matching**: Flexible text comparison
 - **Model grading**: AI-judges-AI for complex tasks
 - **Structured choices**: Consistent scoring with predefined options
+- **Semantic similarity**: Meaning-based evaluation using embeddings and cosine similarity
 
 ## Contributing
 
@@ -781,6 +796,9 @@ const customQualityGate: QualityGate = {
 - **[docs/OLLAMA_SETUP.md](docs/OLLAMA_SETUP.md)**: Complete guide for local model evaluation with Ollama
 - **[docs/HUGGINGFACE_SETUP.md](docs/HUGGINGFACE_SETUP.md)**: Guide for using HuggingFace community models
 - **[docs/EXTENDING_MODELS.md](docs/EXTENDING_MODELS.md)**: How to add support for new LLM providers
+
+### **Advanced Evaluation Guides**
+- **[docs/SEMANTIC_SIMILARITY_GUIDE.md](docs/SEMANTIC_SIMILARITY_GUIDE.md)**: Complete guide to meaning-based evaluation using embeddings
 
 ### **Example Configurations**
 - **`examples/production-config.yaml`**: Production pipeline configuration

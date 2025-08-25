@@ -46,8 +46,12 @@ Think of it like a **testing system for AI models** - similar to how students ta
 #### **Core Framework:**
 1. **Configuration Files** (`registry/evals/*.yaml`) - Define what tests to run
 2. **Dataset Files** (`registry/data/*.jsonl`) - Contain the actual questions
-3. **AI Clients** (`src/llm-client.ts`) - Talk to different AI models
-4. **Evaluation Templates** (`src/templates/*.ts`) - Different ways to grade answers
+3. **AI Clients** (`src/llm-client.ts`) - Talk to different AI models (OpenAI, Ollama, HuggingFace)
+4. **Evaluation Templates** (`src/templates/*.ts`) - Different ways to grade answers:
+   - BasicEval (exact matching)
+   - ModelGradedEval (AI judges AI) 
+   - ChoiceBasedEval (structured choices)
+   - SemanticSimilarityEval (meaning-based with embeddings)
 5. **CLI Tool** (`src/cli.ts`) - The command you run to start tests
 6. **Results & Logs** (`logs/*.jsonl`) - Where results are saved
 
@@ -389,6 +393,12 @@ function validateSample(data: any, lineNumber: number): EvalSample {
 
 These are different ways to grade AI responses. Think of them as different types of exams.
 
+**Available Evaluation Templates:**
+- **BasicEval**: Exact text matching (strict)
+- **ModelGradedEval**: AI judges AI (flexible, subjective)  
+- **ChoiceBasedEval**: AI picks from predefined choices (structured)
+- **SemanticSimilarityEval**: Meaning-based evaluation (intelligent, robust)
+
 #### Basic Evaluation (`src/templates/basic-eval.ts`)
 
 **What it does:** Simple text matching - checks if the AI's answer matches the expected answer exactly.
@@ -541,6 +551,260 @@ export class ChoiceBasedEval implements EvalTemplate {
 }
 ```
 
+#### Semantic Similarity Evaluation (`src/templates/semantic-similarity-eval.ts`)
+
+**What it does:** Uses embeddings and cosine similarity to compare model outputs with ideal answers based on **meaning** rather than exact text matches.
+
+**When to use:** Creative tasks, translations, question answering, explanations - any scenario where multiple phrasings can be correct.
+
+**Why it's revolutionary:** Traditional evaluations fail when responses are correct but worded differently. Semantic similarity solves this by understanding **meaning**.
+
+```typescript
+// Example: Traditional vs Semantic
+// Question: "What is the capital of France?"
+// Expected: "Paris"
+// Model says: "The capital city of France is Paris."
+
+// Traditional exact match: ❌ FAIL (different text)
+// Semantic similarity: ✅ PASS (same meaning, similarity: 0.87)
+```
+
+**How it works:**
+
+```typescript
+export class SemanticSimilarityEval implements EvalTemplate {
+  private semanticService: SemanticSimilarityService;
+  private args: SemanticSimilarityEvalArgs;
+
+  constructor(args: SemanticSimilarityEvalArgs) {
+    // Configuration with defaults
+    this.args = {
+      threshold: 0.8,                    // Minimum similarity to pass
+      embeddings_provider: 'openai',     // or 'local'
+      match_mode: 'best',                // 'best', 'threshold', or 'all'
+      cache_embeddings: true,            // Performance optimization
+      ...args
+    };
+    
+    // Create embeddings service
+    const provider = createEmbeddingsProvider(this.args.embeddings_provider);
+    this.semanticService = new SemanticSimilarityService(provider);
+  }
+
+  async evaluate(sample: EvalSample, completion: CompletionResult): Promise<EvalResult> {
+    const actualText = completion.content.trim();
+    const idealAnswers = Array.isArray(sample.ideal) ? sample.ideal : [sample.ideal];
+    
+    let score: number;
+    let passed: boolean;
+    let reasoning: string;
+
+    switch (this.args.match_mode) {
+      case 'best':
+        // Find the highest similarity among all ideal answers
+        const bestMatch = await this.semanticService.calculateBestMatch(actualText, idealAnswers);
+        score = bestMatch.bestSimilarity;
+        passed = score >= this.args.threshold;
+        reasoning = `Best semantic match: ${bestMatch.bestMatch} (similarity: ${score.toFixed(4)})`;
+        break;
+
+      case 'threshold':
+        // Pass if ANY ideal answer meets threshold
+        const similarities = await Promise.all(
+          idealAnswers.map(ideal => 
+            this.semanticService.calculateSimilarity(actualText, ideal)
+          )
+        );
+        const maxSim = Math.max(...similarities.map(s => s.similarity));
+        const passingCount = similarities.filter(s => s.similarity >= this.args.threshold).length;
+        
+        score = maxSim;
+        passed = passingCount > 0;
+        reasoning = `Threshold mode: ${passingCount}/${idealAnswers.length} answers above threshold`;
+        break;
+
+      case 'all':
+        // Must meet threshold for ALL ideal answers
+        const allSims = await Promise.all(
+          idealAnswers.map(ideal => 
+            this.semanticService.calculateSimilarity(actualText, ideal)
+          )
+        );
+        const avgSim = allSims.reduce((sum, s) => sum + s.similarity, 0) / allSims.length;
+        const allPassing = allSims.filter(s => s.similarity >= this.args.threshold).length;
+        
+        score = avgSim;
+        passed = allPassing === idealAnswers.length;
+        reasoning = `All mode: ${allPassing}/${idealAnswers.length} answers above threshold`;
+        break;
+    }
+
+    return {
+      sample_id: this.generateSampleId(sample),
+      input: sample.input,
+      ideal: sample.ideal,
+      completion,
+      score,
+      passed,
+      reasoning,
+      metadata: {
+        embeddings_provider: this.args.embeddings_provider,
+        match_mode: this.args.match_mode,
+        threshold: this.args.threshold,
+        similarity_scores: score
+      }
+    };
+  }
+}
+```
+
+**The Three Match Modes Explained:**
+
+**🥇 Best Mode (`match_mode: 'best'`)** - Most common
+- Finds the **highest similarity** among all ideal answers
+- Uses the best match for scoring
+- **When to use**: When any of multiple correct answers is acceptable
+
+```typescript
+// Example: Multiple greetings
+// Ideal: ["Hello", "Hi", "Hey", "Greetings"]  
+// Model says: "Good morning"
+// Similarities: [0.75, 0.73, 0.68, 0.81]
+// Score: 0.81 (best match with "Greetings")
+```
+
+**🎯 Threshold Mode (`match_mode: 'threshold'`)** - Most lenient
+- Passes if **ANY ideal answer** meets the threshold
+- Uses maximum similarity for scoring
+- **When to use**: When you want to be generous with multiple answers
+
+```typescript
+// Example: Creative responses
+// Threshold: 0.7
+// If ANY ideal answer gets ≥0.7 similarity → PASS
+// Score: Maximum similarity found
+```
+
+**📏 All Mode (`match_mode: 'all'`)** - Most strict  
+- Requires **ALL ideal answers** to meet threshold
+- Uses average similarity for scoring
+- **When to use**: When response must be similar to all acceptable answers
+
+```typescript
+// Example: Comprehensive requirements
+// ALL ideal answers must get ≥threshold similarity
+// Score: Average similarity across all answers
+```
+
+**Embeddings Providers:**
+
+**🌐 OpenAI Embeddings (Recommended)**
+```yaml
+args:
+  embeddings_provider: openai
+  embeddings_model: text-embedding-3-small  # Fast, cheap
+  # OR
+  embeddings_model: text-embedding-3-large  # Accurate, expensive
+```
+
+- ✅ **High accuracy**: State-of-the-art semantic understanding
+- ✅ **Multilingual**: Supports many languages  
+- ✅ **Consistent**: Reliable, updated models
+- ❌ **Costs money**: ~$0.00002 per 1K tokens (small), ~$0.00013 per 1K tokens (large)
+- ❌ **Requires internet**: API calls needed
+
+**💻 Local Embeddings (Free)**
+```yaml
+args:
+  embeddings_provider: local
+  embeddings_model: all-MiniLM-L6-v2  # Mock implementation
+```
+
+- ✅ **Free**: No API costs ever
+- ✅ **Private**: Data stays on your machine
+- ✅ **Offline**: Works without internet
+- ❌ **Mock implementation**: Not production-ready (currently)
+- ❌ **Lower accuracy**: Simple hash-based similarity
+
+**Example YAML configurations:**
+
+```yaml
+# Basic semantic similarity
+semantic-basic:
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/basic.jsonl
+    threshold: 0.8
+    embeddings_provider: openai
+    match_mode: best
+
+# Creative writing evaluation
+semantic-creative:
+  class: SemanticSimilarityEval  
+  args:
+    samples_jsonl: semantic/creative.jsonl
+    threshold: 0.65                    # Lower threshold for creativity
+    embeddings_provider: openai
+    embeddings_model: text-embedding-3-large
+    match_mode: best
+
+# Local development (free)
+semantic-local:
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/basic.jsonl
+    threshold: 0.75                    # Slightly lower for local
+    embeddings_provider: local         # No API costs
+    match_mode: best
+```
+
+**Usage examples:**
+```bash
+# Basic semantic similarity with OpenAI
+npx ts-node src/cli.ts gpt-3.5-turbo semantic-basic --max-samples 10
+
+# Creative writing with verbose output
+npx ts-node src/cli.ts gpt-4 semantic-creative --verbose --max-samples 5
+
+# Free local evaluation
+npx ts-node src/cli.ts ollama/llama2 semantic-local --max-samples 10
+
+# Test configuration without API costs
+npx ts-node src/cli.ts any-model semantic-qa --dry-run --verbose
+```
+
+**Real-world example output:**
+```bash
+Sample 1/5: ✅ PASS 
+  Expected: "Paris"
+  Got: "The capital of France is Paris."
+  Similarity: 0.8542 (threshold: 0.8)
+  Reasoning: Best semantic match: Paris (similarity: 0.8542)
+
+Sample 2/5: ❌ FAIL
+  Expected: "Blue" 
+  Got: "The ocean appears blue due to light scattering."
+  Similarity: 0.7834 (threshold: 0.8)
+  Reasoning: Best semantic match: Blue (similarity: 0.7834)
+
+🎯 Final Results: 80% accuracy (4/5 passed)
+```
+
+**Why Semantic Similarity is Game-Changing:**
+
+1. **Meaningful Evaluation**: Judges understanding, not memorization
+2. **Handles Creativity**: Works with poetry, stories, explanations  
+3. **Multiple Correct Answers**: Flexible for real-world scenarios
+4. **Language Agnostic**: Works across different languages
+5. **Future-Proof**: Adapts to new AI capabilities automatically
+
+**Common Use Cases:**
+- **Question Answering**: "What is photosynthesis?" has many correct explanations
+- **Creative Writing**: Poetry, stories, creative descriptions
+- **Translation**: Multiple valid translations for same source
+- **Educational**: Student answers with different valid phrasings
+- **Conversational AI**: Natural responses vs. scripted answers
+
 ---
 
 ### 🗂️ Registry System (`src/registry.ts`)
@@ -588,6 +852,8 @@ export class Registry {
         return new ModelGradedEval(config.args, gradingClient);
       case 'ChoiceBasedEval':
         return new ChoiceBasedEval(config.args, gradingClient);
+      case 'SemanticSimilarityEval':
+        return new SemanticSimilarityEval(config.args);
       default:
         throw new Error(`Unknown evaluation template: ${config.class}`);
     }
@@ -1512,11 +1778,14 @@ For each sample (limited to 5 by --max-samples):
   ↓
   llmClient.complete() → sends to OpenAI API
   ↓
-  OpenAI responds: "42"
+  OpenAI responds: "The answer is 42"
   ↓
-  template.evaluate() → BasicEval compares "42" with ideal "42"
+  template.evaluate() → Different templates handle this differently:
+    • BasicEval: Exact match "The answer is 42" vs "42" → FAIL
+    • SemanticSimilarityEval: Embedding similarity 0.95 → PASS
+    • ModelGradedEval: Another AI judges the response → PASS
   ↓
-  Result: { score: 1.0, passed: true, reasoning: "Answer matches expected" }
+  Result: { score: 0.95, passed: true, reasoning: "Semantic similarity: 0.95" }
   ↓
   Logger records this result
 ```
@@ -1549,11 +1818,21 @@ npx ts-node src/cli.ts list
 # Run a basic math evaluation
 npx ts-node src/cli.ts gpt-3.5-turbo math-basic --max-samples 10
 
+# Run semantic similarity evaluation (meaning-based)
+npx ts-node src/cli.ts gpt-3.5-turbo semantic-basic --max-samples 10 --verbose
+
+# Run creative writing evaluation with semantic similarity
+npx ts-node src/cli.ts gpt-4 semantic-creative --max-samples 5
+
+# Free evaluation using local embeddings
+npx ts-node src/cli.ts ollama/llama2 semantic-local --max-samples 10
+
 # Run with verbose output
 npx ts-node src/cli.ts gpt-4 sql-basic --verbose --max-samples 20
 
 # Test without using API (dry run)
 npx ts-node src/cli.ts any-model math-basic --dry-run --verbose
+npx ts-node src/cli.ts any-model semantic-qa --dry-run --verbose
 ```
 
 ### 1.5. Using Production Features
@@ -1676,7 +1955,7 @@ my-evaluation:
   id: my-evaluation.v1
   description: Description of what this tests
   metrics: [accuracy]
-  class: BasicEval  # or ModelGradedEval, or ChoiceBasedEval
+  class: BasicEval  # BasicEval, ModelGradedEval, ChoiceBasedEval, or SemanticSimilarityEval
   args:
     samples_jsonl: my-topic/questions.jsonl
     match_type: exact

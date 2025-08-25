@@ -5,10 +5,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import { EvalConfig, EvalRegistry, EvalTemplate, BasicEvalArgs, ModelGradedEvalArgs } from './types';
+import { EvalConfig, EvalRegistry, EvalTemplate, BasicEvalArgs, ModelGradedEvalArgs, SemanticSimilarityEvalArgs } from './types';
 import { BasicEval } from './templates/basic-eval';
 import { ModelGradedEval } from './templates/model-graded-eval';
 import { ChoiceBasedEval, ChoiceBasedEvalArgs } from './templates/choice-based-eval';
+import { SemanticSimilarityEval } from './templates/semantic-similarity-eval';
 import { LLMClient } from './types';
 
 export class Registry {
@@ -103,6 +104,9 @@ export class Registry {
           throw new Error('Grading client is required for choice-based evaluations');
         }
         return new ChoiceBasedEval(config.args as ChoiceBasedEvalArgs, gradingClient);
+      
+      case 'SemanticSimilarityEval':
+        return new SemanticSimilarityEval(config.args as SemanticSimilarityEvalArgs);
       
       default:
         throw new Error(`Unknown evaluation template: ${className}`);

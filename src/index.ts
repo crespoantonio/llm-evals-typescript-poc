@@ -20,3 +20,13 @@ export { loadDataset, saveDataset, createSampleDataset } from './dataset-loader'
 export { BasicEval } from './templates/basic-eval';
 export { ModelGradedEval } from './templates/model-graded-eval';
 export { ChoiceBasedEval } from './templates/choice-based-eval';
+export { SemanticSimilarityEval } from './templates/semantic-similarity-eval';
+
+// Embeddings and semantic similarity
+export { 
+  SemanticSimilarityService, 
+  OpenAIEmbeddingsProvider, 
+  LocalEmbeddingsProvider,
+  createEmbeddingsProvider,
+  cosineSimilarity 
+} from './embeddings/embeddings-service';

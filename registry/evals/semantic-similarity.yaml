@@ -1,0 +1,127 @@
+# Semantic Similarity Evaluation Configurations
+
+# Basic semantic similarity evaluation
+semantic-basic:
+  id: semantic-basic.dev.v0
+  description: Basic semantic similarity evaluation using embeddings
+  metrics: [accuracy, semantic_similarity]
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/basic.jsonl
+    threshold: 0.8                    # Minimum similarity score to pass
+    embeddings_provider: openai       # openai or local
+    embeddings_model: text-embedding-3-small
+    match_mode: best                  # best, threshold, or all
+    cache_embeddings: true
+
+# High threshold semantic similarity
+semantic-strict:
+  id: semantic-strict.dev.v0
+  description: Strict semantic similarity with high threshold
+  metrics: [accuracy, semantic_similarity]
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/basic.jsonl
+    threshold: 0.9                    # Very high threshold
+    embeddings_provider: openai
+    embeddings_model: text-embedding-3-large  # More accurate model
+    match_mode: best
+    cache_embeddings: true
+
+# Multiple answer semantic evaluation
+semantic-multi:
+  id: semantic-multi.dev.v0
+  description: Semantic similarity with multiple acceptable answers
+  metrics: [accuracy, semantic_similarity]
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/multi-answer.jsonl
+    threshold: 0.75
+    embeddings_provider: openai
+    embeddings_model: text-embedding-3-small
+    match_mode: best                  # Find best match among multiple answers
+    cache_embeddings: true
+
+# Threshold mode semantic evaluation
+semantic-threshold:
+  id: semantic-threshold.dev.v0
+  description: Semantic similarity where any answer above threshold passes
+  metrics: [accuracy, semantic_similarity]
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/multi-answer.jsonl
+    threshold: 0.7
+    embeddings_provider: openai
+    embeddings_model: text-embedding-3-small
+    match_mode: threshold             # Pass if ANY answer meets threshold
+    cache_embeddings: true
+
+# All answers must pass threshold
+semantic-all:
+  id: semantic-all.dev.v0
+  description: Semantic similarity where ALL answers must meet threshold
+  metrics: [accuracy, semantic_similarity]
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/multi-answer.jsonl
+    threshold: 0.8
+    embeddings_provider: openai
+    embeddings_model: text-embedding-3-small
+    match_mode: all                   # ALL answers must meet threshold
+    cache_embeddings: true
+
+# Local embeddings evaluation (no API costs)
+semantic-local:
+  id: semantic-local.dev.v0
+  description: Semantic similarity using local embeddings (no API costs)
+  metrics: [accuracy, semantic_similarity]
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/basic.jsonl
+    threshold: 0.75                   # Slightly lower threshold for local models
+    embeddings_provider: local        # Uses local mock embeddings
+    embeddings_model: all-MiniLM-L6-v2
+    match_mode: best
+    cache_embeddings: true
+
+# Question answering semantic evaluation
+semantic-qa:
+  id: semantic-qa.dev.v0
+  description: Question answering with semantic similarity scoring
+  metrics: [accuracy, semantic_similarity]
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/qa.jsonl
+    threshold: 0.8
+    embeddings_provider: openai
+    embeddings_model: text-embedding-3-small
+    match_mode: best
+    cache_embeddings: true
+
+# Creative writing semantic evaluation
+semantic-creative:
+  id: semantic-creative.dev.v0
+  description: Creative writing evaluation with semantic similarity
+  metrics: [accuracy, semantic_similarity]
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/creative.jsonl
+    threshold: 0.65                   # Lower threshold for creative tasks
+    embeddings_provider: openai
+    embeddings_model: text-embedding-3-large
+    match_mode: best
+    cache_embeddings: true
+
+# Translation semantic evaluation
+semantic-translation:
+  id: semantic-translation.dev.v0
+  description: Translation quality using semantic similarity
+  metrics: [accuracy, semantic_similarity]
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: semantic/translation.jsonl
+    threshold: 0.85                   # High threshold for translation accuracy
+    embeddings_provider: openai
+    embeddings_model: text-embedding-3-large  # Better for multilingual
+    match_mode: best
+    cache_embeddings: true

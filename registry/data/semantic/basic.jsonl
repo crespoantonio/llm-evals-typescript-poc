@@ -1,0 +1,10 @@
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "What is the capital of France?"}], "ideal": "Paris"}
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "What color is the sky?"}], "ideal": "Blue"}
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "How many days are in a week?"}], "ideal": "Seven days"}
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "What is 2 + 2?"}], "ideal": "Four"}
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "Who wrote Romeo and Juliet?"}], "ideal": "William Shakespeare"}
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "What is the largest planet in our solar system?"}], "ideal": "Jupiter"}
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "What language is spoken in Brazil?"}], "ideal": "Portuguese"}
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "How many legs does a spider have?"}], "ideal": "Eight legs"}
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "What is the chemical symbol for gold?"}], "ideal": "Au"}
+{"input": [{"role": "system", "content": "You are a helpful assistant. Provide concise, accurate answers."}, {"role": "user", "content": "In what year did World War II end?"}], "ideal": "1945"}
