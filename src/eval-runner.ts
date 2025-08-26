@@ -2,19 +2,28 @@
  * Main evaluation runner that orchestrates the evaluation process
  */
 
-import { EvalReport, EvalResult, EvalSample, RunOptions, LogEvent } from './types';
+import { EvalReport, EvalResult, EvalSample, RunOptions, LogEvent, TokenUsage, CompletionResult, CacheConfig, CustomMetricResult } from './types';
 import { Registry } from './registry';
 import { loadDataset } from './dataset-loader';
 import { createLLMClient } from './llm-client';
 import { Logger } from './logger';
+import { CostManager } from './cost-tracking/cost-manager';
+import { EvaluationCache, DEFAULT_CACHE_CONFIG, createEvaluationCache } from './caching/evaluation-cache';
+import { MetricsRegistry, metricsRegistry } from './metrics/custom-metrics';
 
 export class EvalRunner {
   private registry: Registry;
   private logger: Logger;
+  private costManager: CostManager;
+  private cache: EvaluationCache;
+  private metricsRegistry: MetricsRegistry;
 
-  constructor(registryPath?: string) {
+  constructor(registryPath?: string, cacheConfig?: Partial<CacheConfig>) {
     this.registry = new Registry(registryPath);
     this.logger = new Logger();
+    this.costManager = new CostManager();
+    this.cache = createEvaluationCache(cacheConfig);
+    this.metricsRegistry = metricsRegistry;
   }
 
   /**
@@ -115,10 +124,39 @@ export class EvalRunner {
             throw new Error('LLM client or template not initialized');
           }
 
-          const completion = await llmClient.complete(sample.input, {
+          // Build cache key data
+          const completionOptions = {
             temperature: options.temperature,
             max_tokens: options.max_tokens,
-          });
+          };
+          const templateConfig = { 
+            type: config.class, 
+            args: config.args 
+          };
+
+          // Try to get from cache first
+          let completion = await this.cache.getCachedResult(
+            options.model,
+            sample,
+            { completion_options: completionOptions, template: templateConfig }
+          );
+
+          if (completion) {
+            if (options.verbose) {
+              console.log(`💾 Cache hit for sample ${i + 1}`);
+            }
+          } else {
+            // Not in cache, get fresh completion
+            completion = await llmClient.complete(sample.input, completionOptions);
+            
+            // Store in cache for future use
+            await this.cache.setCachedResult(
+              options.model,
+              sample,
+              { completion_options: completionOptions, template: templateConfig },
+              completion
+            );
+          }
 
           // Log sampling event
           await this.logger.logEvent({
@@ -188,7 +226,11 @@ export class EvalRunner {
       const incorrect = totalSamples - correct;
       const score = totalSamples > 0 ? correct / totalSamples : 0;
 
-      const report: EvalReport = {
+      // Calculate token usage and costs
+      const tokenUsage = this.calculateTokenUsage(options.model, results);
+
+      // Preliminary report for custom metrics calculation
+      const preliminaryReport: EvalReport = {
         eval_name: options.eval,
         model: options.model,
         total_samples: totalSamples,
@@ -199,6 +241,36 @@ export class EvalRunner {
         run_id: runId,
         created_at: new Date().toISOString(),
         duration_ms: Date.now() - startTime,
+        token_usage: tokenUsage,
+      };
+
+      // Calculate custom metrics
+      let customMetrics: CustomMetricResult[] | undefined = undefined;
+      if (!options.disable_default_metrics || options.custom_metrics) {
+        try {
+          // Filter metrics if specific ones requested
+          if (options.custom_metrics && options.custom_metrics.length > 0) {
+            // Enable only requested metrics
+            const allMetrics = this.metricsRegistry.getAllMetrics();
+            for (const metric of allMetrics) {
+              const shouldEnable = options.custom_metrics.includes(metric.name);
+              metric.updateConfig({ enabled: shouldEnable });
+            }
+          }
+
+          customMetrics = await this.metricsRegistry.calculateAllMetrics(results, preliminaryReport);
+          
+          if (options.verbose && customMetrics.length > 0) {
+            console.log(`📊 Calculated ${customMetrics.length} custom metrics`);
+          }
+        } catch (error) {
+          console.warn(`⚠️  Error calculating custom metrics: ${(error as Error).message}`);
+        }
+      }
+
+      const report: EvalReport = {
+        ...preliminaryReport,
+        custom_metrics: customMetrics,
       };
 
       // Log final report
@@ -227,6 +299,71 @@ export class EvalRunner {
       console.log(`   Incorrect: ${incorrect}`);
       console.log(`   Accuracy: ${(score * 100).toFixed(2)}%`);
       console.log(`   Duration: ${((Date.now() - startTime) / 1000).toFixed(2)}s`);
+      
+      // Display token usage if available
+      if (tokenUsage) {
+        console.log('');
+        console.log(`📊 Token Usage:`);
+        console.log(`   • Prompt tokens: ${tokenUsage.total_prompt_tokens.toLocaleString()}`);
+        console.log(`   • Completion tokens: ${tokenUsage.total_completion_tokens.toLocaleString()}`);
+        console.log(`   • Total tokens: ${tokenUsage.total_tokens.toLocaleString()}`);
+        console.log(`   • Avg tokens/sample: ${tokenUsage.average_tokens_per_sample}`);
+        console.log(`   • Range: ${tokenUsage.min_tokens_per_sample} - ${tokenUsage.max_tokens_per_sample} tokens`);
+        
+        if (tokenUsage.estimated_cost > 0) {
+          console.log('');
+          console.log(`💰 Estimated Cost:`);
+          console.log(`   • Total: $${tokenUsage.estimated_cost.toFixed(4)}`);
+          if (tokenUsage.cost_breakdown) {
+            console.log(`   • Prompt cost: $${tokenUsage.cost_breakdown.prompt_cost.toFixed(4)}`);
+            console.log(`   • Completion cost: $${tokenUsage.cost_breakdown.completion_cost.toFixed(4)}`);
+          }
+          console.log(`   • Cost per sample: $${(tokenUsage.estimated_cost / totalSamples).toFixed(4)}`);
+        }
+      }
+
+      // Display custom metrics if available
+      if (customMetrics && customMetrics.length > 0) {
+        console.log('');
+        console.log(`📈 Custom Metrics:`);
+        
+        // Group by category
+        const metricsByCategory = customMetrics.reduce((acc, metric) => {
+          if (!acc[metric.category]) acc[metric.category] = [];
+          acc[metric.category].push(metric);
+          return acc;
+        }, {} as Record<string, CustomMetricResult[]>);
+
+        for (const [category, metrics] of Object.entries(metricsByCategory)) {
+          console.log(`   ${this.getCategoryEmoji(category)} ${category.toUpperCase()}:`);
+          for (const metric of metrics) {
+            const trend = metric.higher_is_better ? '↗️' : '↙️';
+            console.log(`      ${trend} ${metric.display_name}: ${this.formatMetricValue(metric.value)}`);
+            if (options.verbose && metric.description) {
+              console.log(`         ${metric.description}`);
+            }
+          }
+        }
+      }
+
+      // Display cache statistics
+      try {
+        const cacheStats = await this.cache.getCacheStats();
+        if (cacheStats.total_requests > 0) {
+          console.log('');
+          console.log(`💾 Cache Performance:`);
+          console.log(`   • Requests: ${cacheStats.total_requests}`);
+          console.log(`   • Hits: ${cacheStats.cache_hits}`);
+          console.log(`   • Hit rate: ${(cacheStats.hit_rate * 100).toFixed(1)}%`);
+          if (cacheStats.hit_rate > 0) {
+            const savedTokens = Math.round(cacheStats.cache_hits * (tokenUsage?.average_tokens_per_sample || 100));
+            console.log(`   • Est. tokens saved: ${savedTokens.toLocaleString()}`);
+          }
+        }
+      } catch (error) {
+        // Silently ignore cache stats errors
+      }
+      
       console.log('='.repeat(50));
 
       return report;
@@ -238,9 +375,124 @@ export class EvalRunner {
     }
   }
 
+  /**
+   * Calculate comprehensive token usage from evaluation results
+   */
+  private calculateTokenUsage(model: string, results: EvalResult[]): TokenUsage | undefined {
+    const completionsWithUsage = results
+      .map(r => r.completion)
+      .filter(c => c.usage && c.usage.total_tokens > 0);
+
+    if (completionsWithUsage.length === 0) {
+      return undefined;
+    }
+
+    // Calculate totals
+    const totalPromptTokens = completionsWithUsage.reduce(
+      (sum, c) => sum + (c.usage?.prompt_tokens || 0), 0
+    );
+    const totalCompletionTokens = completionsWithUsage.reduce(
+      (sum, c) => sum + (c.usage?.completion_tokens || 0), 0
+    );
+    const totalTokens = totalPromptTokens + totalCompletionTokens;
+
+    // Calculate statistics
+    const tokensPerSample = completionsWithUsage.map(c => c.usage?.total_tokens || 0);
+    const avgTokensPerSample = totalTokens / completionsWithUsage.length;
+    const maxTokensPerSample = Math.max(...tokensPerSample);
+    const minTokensPerSample = Math.min(...tokensPerSample);
+
+    // Calculate costs using CostManager
+    const totalCost = completionsWithUsage.reduce((sum, completion) => {
+      return sum + this.costManager.calculateCompletionCost(model, completion);
+    }, 0);
+
+    // Calculate cost breakdown
+    const config = (this.costManager as any).findCostConfig(model);
+    const promptCost = config 
+      ? (totalPromptTokens / 1000) * config.input_cost_per_1k_tokens 
+      : 0;
+    const completionCost = config 
+      ? (totalCompletionTokens / 1000) * config.output_cost_per_1k_tokens 
+      : 0;
+
+    return {
+      total_prompt_tokens: totalPromptTokens,
+      total_completion_tokens: totalCompletionTokens,
+      total_tokens: totalTokens,
+      average_tokens_per_sample: Math.round(avgTokensPerSample),
+      max_tokens_per_sample: maxTokensPerSample,
+      min_tokens_per_sample: minTokensPerSample,
+      estimated_cost: totalCost,
+      cost_breakdown: {
+        prompt_cost: promptCost,
+        completion_cost: completionCost,
+      }
+    };
+  }
+
   private generateRunId(): string {
     const timestamp = new Date().toISOString().replace(/[^\d]/g, '').slice(0, 14);
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
     return `${timestamp}${random}`;
+  }
+
+  /**
+   * Get emoji for metric category
+   */
+  private getCategoryEmoji(category: string): string {
+    const emojis: Record<string, string> = {
+      accuracy: '🎯',
+      efficiency: '⚡',
+      cost: '💰',
+      quality: '✨',
+      safety: '🛡️',
+      business: '📊',
+      custom: '🔧'
+    };
+    return emojis[category] || '📈';
+  }
+
+  /**
+   * Format metric value for display
+   */
+  private formatMetricValue(value: number): string {
+    if (value < 0.01 && value > 0) {
+      return value.toExponential(2);
+    } else if (value < 1) {
+      return value.toFixed(3);
+    } else if (value < 100) {
+      return value.toFixed(2);
+    } else {
+      return Math.round(value).toLocaleString();
+    }
+  }
+
+  /**
+   * Clean up cache connections when done
+   */
+  async cleanup(): Promise<void> {
+    await this.cache.close();
+  }
+
+  /**
+   * Get cache statistics
+   */
+  async getCacheStats(): Promise<any> {
+    return await this.cache.getCacheStats();
+  }
+
+  /**
+   * Clear evaluation cache
+   */
+  async clearCache(): Promise<void> {
+    await this.cache.clearCache();
+  }
+
+  /**
+   * Invalidate cache for specific model
+   */
+  async invalidateModelCache(model: string): Promise<number> {
+    return await this.cache.invalidateModelCache(model);
   }
 }

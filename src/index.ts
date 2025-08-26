@@ -30,3 +30,22 @@ export {
   createEmbeddingsProvider,
   cosineSimilarity 
 } from './embeddings/embeddings-service';
+
+// Caching system
+export { 
+  EvaluationCache, 
+  DEFAULT_CACHE_CONFIG, 
+  createEvaluationCache 
+} from './caching/evaluation-cache';
+
+// Custom metrics
+export {
+  CustomMetric,
+  MetricsRegistry,
+  CostEfficiencyMetric,
+  ResponseConsistencyMetric,
+  TokenEfficiencyMetric,
+  BusinessImpactMetric,
+  LatencyPercentileMetric,
+  metricsRegistry
+} from './metrics/custom-metrics';

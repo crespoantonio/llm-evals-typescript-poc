@@ -56,6 +56,24 @@ export interface EvalResult {
 }
 
 /**
+ * Token usage summary
+ */
+export interface TokenUsage {
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
+  total_tokens: number;
+  average_tokens_per_sample: number;
+  max_tokens_per_sample: number;
+  min_tokens_per_sample: number;
+  estimated_cost: number;
+  cost_breakdown?: {
+    prompt_cost: number;
+    completion_cost: number;
+    embedding_cost?: number;
+  };
+}
+
+/**
  * Final evaluation report
  */
 export interface EvalReport {
@@ -69,6 +87,8 @@ export interface EvalReport {
   run_id: string;
   created_at: string;
   duration_ms: number;
+  token_usage?: TokenUsage; // Token and cost tracking
+  custom_metrics?: CustomMetricResult[]; // Custom metrics results
   metadata?: Record<string, any>; // Optional metadata for reports
 }
 
@@ -180,6 +200,9 @@ export interface RunOptions {
   max_tokens?: number;
   dry_run?: boolean;
   verbose?: boolean;
+  cache_config?: Partial<CacheConfig>; // Optional cache configuration
+  custom_metrics?: string[]; // Names of custom metrics to calculate
+  disable_default_metrics?: boolean; // Disable built-in metrics if only custom ones needed
 }
 
 /**
@@ -192,4 +215,50 @@ export interface LogEvent {
   type: 'spec' | 'sampling' | 'match' | 'metrics' | 'final_report';
   data: Record<string, any>;
   created_at: string;
+}
+
+/**
+ * Custom metric result
+ */
+export interface CustomMetricResult {
+  name: string;
+  value: number;
+  display_name: string;
+  description: string;
+  higher_is_better: boolean;
+  category: 'accuracy' | 'efficiency' | 'cost' | 'quality' | 'safety' | 'business' | 'custom';
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Evaluation cache configuration
+ */
+export interface CacheConfig {
+  enabled: boolean;
+  provider: 'redis' | 'memory';
+  redis_url?: string;
+  ttl_seconds: number;
+  max_memory_items: number;
+}
+
+/**
+ * Cache statistics
+ */
+export interface CacheStats {
+  total_requests: number;
+  cache_hits: number;
+  cache_misses: number;
+  hit_rate: number;
+  memory_usage?: number;
+  redis_connected?: boolean;
+}
+
+/**
+ * Custom metric configuration
+ */
+export interface MetricConfig {
+  enabled: boolean;
+  weight?: number;
+  threshold?: number;
+  parameters?: Record<string, any>;
 }

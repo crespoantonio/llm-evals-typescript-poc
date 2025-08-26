@@ -1,0 +1,97 @@
+# Advanced Features Demo - Intelligent Caching & Custom Metrics
+# This evaluation demonstrates the advanced caching and custom metrics capabilities
+
+advanced-math-with-caching:
+  id: advanced-math-with-caching
+  description: "Advanced math evaluation showcasing intelligent caching and custom metrics"
+  disclaimer: "This evaluation demonstrates cache optimization and cost efficiency analysis"
+  metrics: 
+    - "accuracy"
+    - "cost_efficiency" 
+    - "token_efficiency"
+    - "response_consistency"
+  class: ChoiceBasedEval
+  args:
+    samples_jsonl: "data/advanced-math.jsonl"
+    prompt: |
+      You are evaluating a math problem response.
+      
+      Problem: {input}
+      Expected Answer: {ideal}
+      Model Response: {completion}
+      
+      Based on the response, choose the most appropriate evaluation:
+      
+      A) PERFECT - The answer is completely correct and well explained
+      B) GOOD - The answer is correct but explanation could be better
+      C) PARTIAL - The approach is right but there are minor errors
+      D) WRONG - The answer is incorrect or the approach is fundamentally flawed
+    choice_strings: ["A) PERFECT", "B) GOOD", "C) PARTIAL", "D) WRONG"]
+    choice_scores: 
+      "A) PERFECT": 1.0
+      "B) GOOD": 0.8
+      "C) PARTIAL": 0.4
+      "D) WRONG": 0.0
+    grading_model: "gpt-3.5-turbo"
+
+cost-optimization-demo:
+  id: cost-optimization-demo
+  description: "Demonstration of cost optimization using cache and efficiency metrics"
+  disclaimer: "Run multiple times to see caching benefits"
+  metrics:
+    - "accuracy"
+    - "cost_efficiency"
+    - "business_impact"
+  class: BasicEval
+  args:
+    samples_jsonl: "data/cost-demo.jsonl"
+    match_type: "fuzzy"
+    case_sensitive: false
+
+semantic-quality-analysis:
+  id: semantic-quality-analysis  
+  description: "Advanced quality analysis using semantic similarity and custom metrics"
+  disclaimer: "Requires OpenAI API key for embeddings"
+  metrics:
+    - "semantic_similarity"
+    - "response_consistency" 
+    - "business_impact"
+    - "latency_p95"
+  class: SemanticSimilarityEval
+  args:
+    samples_jsonl: "data/semantic/quality-analysis.jsonl"
+    threshold: 0.85
+    embeddings_provider: "openai"
+    embeddings_model: "text-embedding-ada-002"
+    match_mode: "best"
+    cache_embeddings: true
+
+multi-model-efficiency:
+  id: multi-model-efficiency
+  description: "Compare efficiency across different models with comprehensive metrics"
+  disclaimer: "Best used for A/B testing different models"  
+  metrics:
+    - "accuracy"
+    - "cost_efficiency"
+    - "token_efficiency"
+    - "response_consistency"
+    - "business_impact"
+  class: ModelGradedEval
+  args:
+    samples_jsonl: "data/efficiency-test.jsonl"
+    eval_type: "cot_classify"
+    grading_model: "gpt-4"
+    grading_prompt: |
+      Evaluate this response for quality and efficiency:
+      
+      Input: {input}
+      Response: {completion}
+      Expected: {ideal}
+      
+      Consider:
+      1. Accuracy of the response
+      2. Clarity and conciseness
+      3. Appropriate level of detail
+      4. User-friendliness
+      
+      Rate from 0.0 to 1.0 and explain your reasoning.

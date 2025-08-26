@@ -1,0 +1,15 @@
+{"input": [{"role": "user", "content": "What is the capital of France?"}], "ideal": "Paris"}
+{"input": [{"role": "user", "content": "What is 2 + 2?"}], "ideal": "4"}
+{"input": [{"role": "user", "content": "Who wrote Romeo and Juliet?"}], "ideal": "William Shakespeare"}
+{"input": [{"role": "user", "content": "What color do you get when you mix red and blue?"}], "ideal": "Purple"}
+{"input": [{"role": "user", "content": "How many days are in a week?"}], "ideal": "7"}
+{"input": [{"role": "user", "content": "What is the largest planet in our solar system?"}], "ideal": "Jupiter"}
+{"input": [{"role": "user", "content": "What is 10 x 5?"}], "ideal": "50"}
+{"input": [{"role": "user", "content": "In which year did World War II end?"}], "ideal": "1945"}
+{"input": [{"role": "user", "content": "What is the chemical symbol for water?"}], "ideal": "H2O"}
+{"input": [{"role": "user", "content": "What is the capital of Japan?"}], "ideal": "Tokyo"}
+{"input": [{"role": "user", "content": "What is the square of 5?"}], "ideal": "25"}
+{"input": [{"role": "user", "content": "Who painted the Mona Lisa?"}], "ideal": "Leonardo da Vinci"}
+{"input": [{"role": "user", "content": "What is 100 divided by 4?"}], "ideal": "25"}
+{"input": [{"role": "user", "content": "What is the smallest prime number?"}], "ideal": "2"}
+{"input": [{"role": "user", "content": "How many continents are there?"}], "ideal": "7"}
