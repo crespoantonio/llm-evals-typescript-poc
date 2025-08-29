@@ -898,6 +898,7 @@ const customQualityGate: QualityGate = {
 ## 📚 Documentation & Resources
 
 ### **Comprehensive Guides**
+- **[WALKTHROUGH.md](WALKTHROUGH.md)**: 🚀 **START HERE** - Complete hands-on walkthrough (30 min guided experience)
 - **[FRAMEWORK_EXPLAINED.md](FRAMEWORK_EXPLAINED.md)**: Complete beginner's guide with step-by-step explanations
 - **[CUSTOM_EVALS_GUIDE.md](CUSTOM_EVALS_GUIDE.md)**: Advanced guide for building custom evaluations
 - **[PRODUCTION_SETUP.md](PRODUCTION_SETUP.md)**: Production deployment and optional dependencies setup
@@ -920,10 +921,11 @@ const customQualityGate: QualityGate = {
 
 ### **Getting Started Path**
 1. **🎯 Start Here**: Follow the [Quick Start](#-quick-start) section above
-2. **🤖 Choose Models**: Set up [OpenAI](https://platform.openai.com/api-keys), [Ollama](docs/OLLAMA_SETUP.md), or [HuggingFace](docs/HUGGINGFACE_SETUP.md) models
-3. **📖 Deep Dive**: Read [FRAMEWORK_EXPLAINED.md](FRAMEWORK_EXPLAINED.md) for complete understanding
-4. **🏗️ Build Custom**: Use [CUSTOM_EVALS_GUIDE.md](CUSTOM_EVALS_GUIDE.md) for advanced features
-5. **🚀 Production**: Deploy with [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md)
+2. **🚀 Guided Experience**: Complete the hands-on [WALKTHROUGH.md](WALKTHROUGH.md) for step-by-step mastery (30 min)
+3. **🤖 Choose Models**: Set up [OpenAI](https://platform.openai.com/api-keys), [Ollama](docs/OLLAMA_SETUP.md), or [HuggingFace](docs/HUGGINGFACE_SETUP.md) models
+4. **📖 Deep Dive**: Read [FRAMEWORK_EXPLAINED.md](FRAMEWORK_EXPLAINED.md) for complete understanding
+5. **🏗️ Build Custom**: Use [CUSTOM_EVALS_GUIDE.md](CUSTOM_EVALS_GUIDE.md) for advanced features
+6. **🚀 Production**: Deploy with [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md)
 
 ## 🎯 Use Cases & Industries
 
