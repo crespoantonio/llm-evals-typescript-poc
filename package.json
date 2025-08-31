@@ -14,12 +14,17 @@
     "lint": "eslint src/**/*.ts",
     "clean": "rm -rf dist"
   },
-  "keywords": ["llm", "evaluation", "ai", "typescript"],
+  "keywords": [
+    "llm",
+    "evaluation",
+    "ai",
+    "typescript"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^20.0.0",
     "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
     "@types/yargs": "^17.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
@@ -30,11 +35,17 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "openai": "^4.0.0",
-    "yargs": "^17.0.0",
-    "yaml": "^2.0.0",
+    "@huggingface/inference": "^4.7.1",
+    "@types/express": "^5.0.3",
     "chalk": "^4.1.2",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "ollama": "^0.5.17",
+    "openai": "^4.0.0",
     "ora": "^5.4.1",
-    "table": "^6.8.0"
+    "sqlite3": "^5.1.7",
+    "table": "^6.8.0",
+    "yaml": "^2.0.0",
+    "yargs": "^17.0.0"
   }
 }

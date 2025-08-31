@@ -4,6 +4,9 @@
  * Command-line interface for the LLM evaluation framework
  */
 
+// Load environment variables from .env file
+import 'dotenv/config';
+
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import chalk from 'chalk';
@@ -14,8 +17,16 @@ import { TokenAnalyticsService } from './analytics/token-analytics';
 import { CostManager } from './cost-tracking/cost-manager';
 import { EvaluationStore } from './database/evaluation-store';
 import { RunOptions } from './types';
+import { validateEnvironment, printEnvValidation, validateOpenAIEnvironment } from './utils/env-validator';
 
 async function main() {
+  // Validate environment setup early
+  const envValidation = validateEnvironment();
+  if (process.argv.length > 2 && !['--help', '-h', '--version', '-V'].some(arg => process.argv.includes(arg))) {
+    printEnvValidation(envValidation);
+    console.log(); // Add spacing
+  }
+
   const argv = await yargs(hideBin(process.argv))
     .scriptName('llm-eval')
     .usage('$0 <model> <eval> [options]')
@@ -358,6 +369,11 @@ async function main() {
       description: 'Maximum tokens in completion',
     })
     
+    .option('timeout', {
+      type: 'number',
+      description: 'Request timeout in milliseconds (default: 300000ms for Ollama, 120000ms for HuggingFace)',
+    })
+    
     .option('dry-run', {
       type: 'boolean',
       description: 'Run without calling the model (for testing)',
@@ -392,6 +408,7 @@ async function main() {
       log_to_file: argv['log-to-file'] as string | undefined,
       temperature: argv.temperature as number,
       max_tokens: argv['max-tokens'] as number | undefined,
+      timeout: argv.timeout as number | undefined,
       dry_run: argv['dry-run'] as boolean,
       verbose: argv.verbose as boolean,
       seed: argv.seed as number | undefined,
@@ -403,38 +420,48 @@ async function main() {
 
 async function runEval(options: RunOptions): Promise<void> {
   try {
-    console.log(chalk.blue('🧠 LLM Evaluation Framework'));
-    console.log(chalk.gray(`Model: ${options.model} | Eval: ${options.eval}`));
+    if (options.verbose) {
+      console.log(chalk.blue('🧠 LLM Evaluation Framework'));
+      console.log(chalk.gray(`Model: ${options.model} | Eval: ${options.eval}`));
+    }
     
     if (options.dry_run) {
       console.log(chalk.yellow('⚠️  DRY RUN MODE - No API calls will be made'));
+    } else {
+      // Validate API key for models that need it
+      const needsOpenAI = options.model.startsWith('gpt-') || 
+                         options.model.startsWith('o1-') || 
+                         options.model.startsWith('openai/');
+      
+      if (needsOpenAI && !validateOpenAIEnvironment()) {
+        console.log(chalk.red('\nCannot proceed without valid OPENAI_API_KEY'));
+        process.exit(1);
+      }
     }
 
     const runner = new EvalRunner(options.registry_path);
     const report = await runner.runEval(options);
 
-    // Generate log file if not specified
-    if (!options.log_to_file) {
-      options.log_to_file = Logger.generateLogPath(
-        report.run_id,
-        options.model,
-        options.eval
-      );
-      
-      const runner2 = new EvalRunner(options.registry_path);
-      await runner2.runEval({ ...options, log_to_file: options.log_to_file });
-    }
+    // Generate and save log file if not specified
+    const logPath = options.log_to_file || Logger.generateLogPath(
+      report.run_id,
+      options.model,
+      options.eval
+    );
 
-    console.log(chalk.green(`\n📁 Detailed logs saved to: ${options.log_to_file}`));
+    // Always save logs using the actual run_id from the report
+    await runner.saveToFile(logPath, report.run_id);
+
+    console.log(`\nDetailed logs saved to: ${logPath}`);
     
     // Color-code the results
     const scoreColor = report.score >= 0.8 ? chalk.green : 
                       report.score >= 0.6 ? chalk.yellow : chalk.red;
     
-    console.log(chalk.bold('\n🎯 Final Score: ') + scoreColor(`${(report.score * 100).toFixed(1)}%`));
+    console.log(chalk.bold('\nFinal Score: ') + scoreColor(`${(report.score * 100).toFixed(1)}%`));
 
   } catch (error) {
-    console.error(chalk.red('❌ Evaluation failed:'), error instanceof Error ? error.message : String(error));
+    console.error(chalk.red('Evaluation failed:'), error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

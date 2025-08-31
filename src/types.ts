@@ -129,6 +129,7 @@ export interface CompletionOptions {
   frequency_penalty?: number;
   presence_penalty?: number;
   stop?: string | string[];
+  format?: string; // Added for ollama format support (json, etc.)
 }
 
 /**
@@ -198,6 +199,7 @@ export interface RunOptions {
   seed?: number;
   temperature?: number;
   max_tokens?: number;
+  timeout?: number; // Request timeout in milliseconds
   dry_run?: boolean;
   verbose?: boolean;
   cache_config?: Partial<CacheConfig>; // Optional cache configuration

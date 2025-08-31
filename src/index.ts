@@ -2,6 +2,9 @@
  * Main entry point for the LLM evaluation framework
  */
 
+// Load environment variables from .env file
+import 'dotenv/config';
+
 // Core types
 export * from './types';
 

@@ -32,6 +32,7 @@ export class CostManager {
   private costs: Map<string, CostConfig> = new Map();
   private budgets: Map<string, number> = new Map(); // evaluation -> budget limit
   private currentCosts: Map<string, number> = new Map(); // evaluation -> current cost
+  private warnedModels: Set<string> = new Set(); // track models we've already warned about
 
   constructor() {
     this.initDefaultCosts();
@@ -95,7 +96,11 @@ export class CostManager {
   ): number {
     const config = this.findCostConfig(model);
     if (!config) {
-      console.warn(`⚠️  No cost config found for model ${model}`);
+      // Only warn once per model to avoid spam
+      if (!this.warnedModels.has(model)) {
+        console.warn(`⚠️  No cost config found for model ${model}`);
+        this.warnedModels.add(model);
+      }
       return 0;
     }
 

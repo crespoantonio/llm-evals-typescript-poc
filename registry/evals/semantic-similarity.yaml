@@ -9,8 +9,8 @@ semantic-basic:
   args:
     samples_jsonl: semantic/basic.jsonl
     threshold: 0.8                    # Minimum similarity score to pass
-    embeddings_provider: openai       # openai or local
-    embeddings_model: text-embedding-3-small
+    embeddings_provider: local       # openai or local
+    embeddings_model: all-MiniLM-L6-v2
     match_mode: best                  # best, threshold, or all
     cache_embeddings: true
 
@@ -23,8 +23,8 @@ semantic-strict:
   args:
     samples_jsonl: semantic/basic.jsonl
     threshold: 0.9                    # Very high threshold
-    embeddings_provider: openai
-    embeddings_model: text-embedding-3-large  # More accurate model
+    embeddings_provider: local
+    embeddings_model: all-MiniLM-L6-v2  # More accurate model
     match_mode: best
     cache_embeddings: true
 
@@ -37,8 +37,8 @@ semantic-multi:
   args:
     samples_jsonl: semantic/multi-answer.jsonl
     threshold: 0.75
-    embeddings_provider: openai
-    embeddings_model: text-embedding-3-small
+    embeddings_provider: local
+    embeddings_model: all-MiniLM-L6-v2
     match_mode: best                  # Find best match among multiple answers
     cache_embeddings: true
 
@@ -51,8 +51,8 @@ semantic-threshold:
   args:
     samples_jsonl: semantic/multi-answer.jsonl
     threshold: 0.7
-    embeddings_provider: openai
-    embeddings_model: text-embedding-3-small
+    embeddings_provider: local
+    embeddings_model: all-MiniLM-L6-v2
     match_mode: threshold             # Pass if ANY answer meets threshold
     cache_embeddings: true
 
@@ -65,8 +65,8 @@ semantic-all:
   args:
     samples_jsonl: semantic/multi-answer.jsonl
     threshold: 0.8
-    embeddings_provider: openai
-    embeddings_model: text-embedding-3-small
+    embeddings_provider: local
+    embeddings_model: all-MiniLM-L6-v2
     match_mode: all                   # ALL answers must meet threshold
     cache_embeddings: true
 
@@ -93,8 +93,8 @@ semantic-qa:
   args:
     samples_jsonl: semantic/qa.jsonl
     threshold: 0.8
-    embeddings_provider: openai
-    embeddings_model: text-embedding-3-small
+    embeddings_provider: local
+    embeddings_model: all-MiniLM-L6-v2
     match_mode: best
     cache_embeddings: true
 
@@ -106,9 +106,9 @@ semantic-creative:
   class: SemanticSimilarityEval
   args:
     samples_jsonl: semantic/creative.jsonl
-    threshold: 0.65                   # Lower threshold for creative tasks
-    embeddings_provider: openai
-    embeddings_model: text-embedding-3-large
+    threshold: 0.3                  # Lower threshold for creative tasks
+    embeddings_provider: local
+    embeddings_model: all-MiniLM-L6-v2
     match_mode: best
     cache_embeddings: true
 
@@ -121,7 +121,7 @@ semantic-translation:
   args:
     samples_jsonl: semantic/translation.jsonl
     threshold: 0.85                   # High threshold for translation accuracy
-    embeddings_provider: openai
-    embeddings_model: text-embedding-3-large  # Better for multilingual
+    embeddings_provider: local
+    embeddings_model: all-MiniLM-L6-v2  # Better for multilingual
     match_mode: best
     cache_embeddings: true

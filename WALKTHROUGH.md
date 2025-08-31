@@ -59,16 +59,15 @@ npx ts-node src/cli.ts list
 🧠 Available Evaluations:
 📚 Math Evaluations:
    • math-basic - Basic arithmetic problems
-   • math-word-problems - Word problem solving
 
 📊 SQL Evaluations:
    • sql-basic - Basic SQL query generation
    • sql-graded - Complex SQL with AI grading
-   • sql-choice-based - Structured SQL evaluation
+   • sql - Structured SQL evaluation with choice-based grading
 
 🛡️ Safety Evaluations:
-   • toxicity - AI toxicity detection
-   • toxicity-advanced - Advanced safety testing
+   • toxicity-detection - AI toxicity detection
+   • toxicity-challenging - Advanced safety testing
 
 🎯 Semantic Evaluations:
    • semantic-basic - Meaning-based evaluation
@@ -229,10 +228,10 @@ npx ts-node src/cli.ts gpt-3.5-turbo math-basic --max-samples 3 --verbose
 
 # Start Ollama and pull a model
 ollama serve &
-ollama pull llama2
+ollama pull llama3.1
 
 # Run evaluation with local model (completely free)
-npx ts-node src/cli.ts ollama/llama2 math-basic --max-samples 2 --verbose
+npx ts-node src/cli.ts ollama/llama3.1 math-basic --max-samples 2 --verbose
 ```
 
 **Expected output:**
@@ -262,15 +261,15 @@ npx ts-node src/cli.ts hf/google/flan-t5-large math-basic --max-samples 2 --verb
 ### Step 3.3: Compare All Providers
 ```bash
 # Model efficiency comparison
-npx ts-node src/cli.ts tokens efficiency gpt-3.5-turbo ollama/llama2 hf/distilgpt2 --eval math-basic
+npx ts-node src/cli.ts tokens efficiency ollama/llama3.1 hf/meta-llama/Llama-3.2-3B-Instruct --eval math-basic
 ```
 
 **Expected output:**
 ```
 📊 Model Efficiency Comparison for math-basic:
 
-🥇 ollama/llama2
-   • Average accuracy: 85.0%
+🥇 ollama/llama3.1
+   • Average accuracy: 90.0%
    • Average cost per sample: $0.0000
    • Average tokens per sample: 45
    • Cost per correct answer: $0.0000
@@ -287,7 +286,7 @@ npx ts-node src/cli.ts tokens efficiency gpt-3.5-turbo ollama/llama2 hf/distilgp
    • Average tokens per sample: 45
    • Cost per correct answer: $0.0001
 
-💡 Recommendation: Use ollama/llama2 for development (free), gpt-3.5-turbo for production (most accurate)
+💡 Recommendation: Use ollama/llama3.1 for development (free), gpt-3.5-turbo for production (most accurate)
 ```
 
 ---
@@ -297,12 +296,12 @@ npx ts-node src/cli.ts tokens efficiency gpt-3.5-turbo ollama/llama2 hf/distilgp
 ### Step 4.1: Model-Graded Evaluation (AI judges AI)
 ```bash
 # Run toxicity detection - one AI evaluates another's safety
-npx ts-node src/cli.ts gpt-3.5-turbo toxicity --max-samples 2 --verbose
+npx ts-node src/cli.ts ollama/llama3.1 toxicity-detection --max-samples 1 --verbose
 ```
 
 **What happens:**
 - 🤖 Model A answers potentially problematic prompts
-- 🧠 Model B (GPT-4) grades Model A's responses for toxicity
+- 🧠 Model B grades Model A's responses for toxicity
 - 📊 Advanced grading with reasoning
 
 **Expected output:**
@@ -317,7 +316,7 @@ Sample 1/2: ✅ PASS (0.95)
 ### Step 4.2: Choice-Based Evaluation (Structured Grading)
 ```bash
 # Structured SQL evaluation with predefined choices
-npx ts-node src/cli.ts gpt-3.5-turbo sql-choice-based --max-samples 2 --verbose
+npx ts-node src/cli.ts gpt-3.5-turbo sql --max-samples 2 --verbose
 ```
 
 **What happens:**
@@ -348,7 +347,7 @@ Sample 1/2: ✅ PASS (0.87)
 ### Step 4.4: Free Semantic Evaluation (Local Embeddings)
 ```bash
 # Semantic evaluation without API costs
-npx ts-node src/cli.ts ollama/llama2 semantic-local --max-samples 2 --verbose
+npx ts-node src/cli.ts ollama/llama3.1 semantic-local --max-samples 2 --verbose
 ```
 
 **Benefits:**
@@ -379,7 +378,7 @@ npx ts-node src/cli.ts cache stats
 
 📊 Cache Performance by Model:
    • gpt-3.5-turbo: 3 hits, 5 misses (37.5% hit rate)
-   • ollama/llama2: 0 hits, 2 misses (0.0% hit rate)
+   • ollama/llama3.1: 0 hits, 2 misses (0.0% hit rate)
 ```
 
 ### Step 5.2: Test Cache Invalidation
@@ -543,7 +542,7 @@ npx ts-node src/cli.ts costs breakdown 7
 
 📊 By Model:
    • gpt-3.5-turbo: $0.0015 (11 samples)
-   • ollama/llama2: $0.0000 (4 samples)
+   • ollama/llama3.1: $0.0000 (4 samples)
    • hf/distilgpt2: $0.0000 (2 samples)
 
 📊 By Provider:
@@ -552,7 +551,7 @@ npx ts-node src/cli.ts costs breakdown 7
    • HuggingFace: $0.0000 (0%)
 
 💡 Recommendations:
-   • Consider ollama/llama2 for development (0% cost)
+   • Consider ollama/llama3.1 for development (0% cost)
    • gpt-3.5-turbo efficiency: 10,000 accuracy per dollar
 ```
 
@@ -604,7 +603,7 @@ npx ts-node src/cli.ts dashboard 3000
    - 📈 Trends and forecasting
    - 💰 Cost analysis by model/evaluation
 
-3. **Model Efficiency:** `http://localhost:3000/api/analytics/tokens/efficiency?models=gpt-3.5-turbo,ollama/llama2`
+3. **Model Efficiency:** `http://localhost:3000/api/analytics/tokens/efficiency?models=gpt-3.5-turbo,ollama/llama3.1`
    - 🏆 Head-to-head model comparison
    - 💰 Cost per correct answer
    - 📊 ROI analysis
@@ -632,7 +631,7 @@ curl http://localhost:3000/api/health
 
 npx ts-node src/cli.ts gpt-3.5-turbo math-basic --max-samples 5
 npx ts-node src/cli.ts gpt-4 math-basic --max-samples 5
-npx ts-node src/cli.ts ollama/llama2 math-basic --max-samples 5
+npx ts-node src/cli.ts ollama/llama3.1 math-basic --max-samples 5
 ```
 
 ### Step 9.2: Token Trends Analysis
@@ -817,9 +816,10 @@ npx ts-node src/cli.ts dashboard 3000
 #### **Scenario A: Cost-Conscious Development**
 ```bash
 # Free development workflow
-npx ts-node src/cli.ts ollama/llama2 math-basic --max-samples 20        # Free local testing
-npx ts-node src/cli.ts ollama/llama2 semantic-local --max-samples 10    # Free semantic eval
-npx ts-node src/cli.ts any-model toxicity --dry-run --verbose           # Free config testing
+npx ts-node src/cli.ts ollama/llama3.1 math-basic --max-samples 20        # Free local testing
+npx ts-node src/cli.ts ollama/llama3.1 semantic-local --max-samples 10    # Free semantic eval
+# Test any evaluation config without API calls
+npx ts-node src/cli.ts any-model toxicity-detection --dry-run --verbose  # Free config testing
 npx ts-node src/cli.ts cache stats                                      # Track cache efficiency
 ```
 
@@ -829,10 +829,10 @@ npx ts-node src/cli.ts cache stats                                      # Track 
 npx ts-node src/cli.ts costs budget production-safety 50.00
 
 # Run comprehensive safety evaluation
-npx ts-node src/cli.ts gpt-4 toxicity-advanced --max-samples 25 --verbose
+npx ts-node src/cli.ts gpt-4 toxicity-challenging --max-samples 25 --verbose
 
 # Monitor results
-npx ts-node src/cli.ts tokens trends toxicity-advanced 7
+npx ts-node src/cli.ts tokens trends toxicity-challenging 7
 npx ts-node src/cli.ts costs breakdown 7
 ```
 
@@ -841,10 +841,10 @@ npx ts-node src/cli.ts costs breakdown 7
 # Compare multiple models statistically
 npx ts-node src/cli.ts gpt-3.5-turbo semantic-qa --max-samples 10
 npx ts-node src/cli.ts gpt-4 semantic-qa --max-samples 10
-npx ts-node src/cli.ts ollama/llama2 semantic-qa --max-samples 10
+npx ts-node src/cli.ts ollama/llama3.1 semantic-qa --max-samples 10
 
 # Analyze efficiency
-npx ts-node src/cli.ts tokens efficiency gpt-3.5-turbo gpt-4 ollama/llama2 --eval semantic-qa
+npx ts-node src/cli.ts tokens efficiency gpt-3.5-turbo gpt-4 ollama/llama3.1 --eval semantic-qa
 
 # Get recommendation
 npx ts-node src/cli.ts tokens report 1

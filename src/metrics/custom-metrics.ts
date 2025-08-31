@@ -393,21 +393,25 @@ export class MetricsRegistry {
       new LatencyPercentileMetric()
     ];
 
-    // Register default metrics
+    // Register default metrics silently
     for (const metric of this.defaultMetrics) {
-      this.registerMetric(metric);
+      this.registerMetric(metric, false);
     }
   }
 
   /**
    * Register a custom metric
    */
-  registerMetric(metric: CustomMetric): void {
+  registerMetric(metric: CustomMetric, verbose: boolean = false): void {
     if (this.metrics.has(metric.name)) {
-      console.warn(`⚠️  Metric '${metric.name}' already exists, overwriting`);
+      if (verbose) {
+        console.warn(`⚠️  Metric '${metric.name}' already exists, overwriting`);
+      }
     }
     this.metrics.set(metric.name, metric);
-    console.log(`📊 Registered custom metric: ${metric.display_name}`);
+    if (verbose) {
+      console.log(`📊 Registered custom metric: ${metric.display_name}`);
+    }
   }
 
   /**
@@ -506,7 +510,7 @@ export class MetricsRegistry {
   resetToDefaults(): void {
     this.metrics.clear();
     for (const metric of this.defaultMetrics) {
-      this.registerMetric(metric);
+      this.registerMetric(metric, false);
     }
   }
 }

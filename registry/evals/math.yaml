@@ -8,13 +8,3 @@ math-basic:
     samples_jsonl: math/basic.jsonl
     match_type: exact
     case_sensitive: false
-math-basic.dev.v0:
-  id: math-basic.dev.v0
-  description: Basic math evaluation using exact matching
-  metrics:
-    - accuracy
-  class: BasicEval
-  args:
-    samples_jsonl: math/basic.jsonl
-    match_type: exact
-    case_sensitive: false

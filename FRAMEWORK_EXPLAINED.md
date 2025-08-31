@@ -423,53 +423,60 @@ npx ts-node src/cli.ts ollama/codellama sql-basic --verbose
 npx ts-node src/cli.ts ollama/any-model math-basic --dry-run
 ```
 
-#### **HuggingFace Client (Community Models)**
+#### **HuggingFace Client (Community Models) - Official Library Integration**
 
-**What it is:** Integration with HuggingFace Inference API for access to 100,000+ community models.
+**What it is:** Integration with HuggingFace Inference API using the official `@huggingface/inference` library for access to 100,000+ community models with modern provider support.
 
 **Key benefits:**
-- **Huge Selection**: 100,000+ models from the community
-- **Free Tier**: Many models work without API keys
-- **Specialized Models**: Domain-specific fine-tuned models
-- **Cutting Edge**: Latest research models appear here first
+- **🚀 Official Library**: Uses `@huggingface/inference` for reliable, maintained integration
+- **🔄 Smart API Selection**: Auto-detects whether to use `chatCompletion` (modern models) or `textGeneration` (legacy models)
+- **🌐 Provider Support**: Automatic provider selection (Together AI, Sambanova, etc.) for better availability
+- **🛡️ Enhanced Error Handling**: Specific error types (`InferenceClientInputError`, `InferenceClientProviderApiError`, etc.)
+- **📈 Huge Selection**: 100,000+ models from the community
+- **💰 Free Tier**: Many models work without API keys
+- **🎯 Specialized Models**: Domain-specific fine-tuned models
+- **⚡ Cutting Edge**: Latest research models appear here first
 
 ```typescript
+import { InferenceClient } from '@huggingface/inference';
+
 export class HuggingFaceClient implements LLMClient {
+  private client: InferenceClient;
   private model: string;
-  private apiKey?: string;
-  private baseUrl = 'https://api-inference.huggingface.co/models';
+
+  constructor(model: string, apiKey?: string, baseUrl?: string, timeout: number = 120000) {
+    this.model = model.replace('hf/', '');
+    
+    // 🚀 NEW: Official HuggingFace.js integration
+    this.client = new InferenceClient(
+      apiKey || process.env.HUGGINGFACE_API_KEY,
+      { ...(baseUrl && { endpointUrl: baseUrl }) }
+    );
+  }
 
   async complete(messages: ChatMessage[]): Promise<CompletionResult> {
-    // Convert messages to prompt format for HF models
-    const prompt = this.formatMessagesAsPrompt(messages);
+    // 🎯 Smart Model Detection: Auto-choose best API method
+    const supportsChatCompletion = this.model.includes('instruct') || 
+                                  this.model.includes('chat') || 
+                                  this.model.includes('llama');
     
-    // Send request to HuggingFace Inference API
-    const response = await fetch(`${this.baseUrl}/${this.model}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
-      },
-      body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          temperature: 0.7,
-          max_new_tokens: 256,
-          return_full_text: false
-        }
-      })
-    });
-    
-    const data = await response.json();
-    return {
-      content: data[0].generated_text,
-      usage: {
-        prompt_tokens: Math.ceil(prompt.length / 4), // Estimated
-        completion_tokens: Math.ceil(data[0].generated_text.length / 4),
-        total_tokens: Math.ceil((prompt.length + data[0].generated_text.length) / 4)
-      },
-      model: this.model
-    };
+    if (supportsChatCompletion) {
+      // ✅ Modern models: Use chatCompletion API (like OpenAI)
+      const response = await this.client.chatCompletion({
+        model: this.model,
+        messages: messages.map(msg => ({ role: msg.role, content: msg.content })),
+        max_tokens: 256,
+        temperature: 0.7
+      });
+      return { content: response.choices[0].message.content };
+    } else {
+      // 📜 Legacy models: Use textGeneration with prompt formatting
+      const response = await this.client.textGeneration({
+        model: this.model,
+        inputs: this.formatMessagesAsPrompt(messages)
+      });
+      return { content: response.generated_text };
+    }
   }
 }
 ```
@@ -521,7 +528,7 @@ export function createLLMClient(model: string): LLMClient {
 # Same evaluation, different providers
 npx ts-node src/cli.ts gpt-4 math-basic              # OpenAI (cloud)
 npx ts-node src/cli.ts ollama/llama2 math-basic      # Local (free)
-npx ts-node src/cli.ts hf/flan-t5-large math-basic   # HuggingFace (community)
+npx ts-node src/cli.ts hf/meta-llama/Llama-3.2-3B-Instruct math-basic   # HuggingFace (official @huggingface/inference)
 ```
 
 ---

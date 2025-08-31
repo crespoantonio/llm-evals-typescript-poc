@@ -10,6 +10,7 @@ import { Logger } from './logger';
 import { CostManager } from './cost-tracking/cost-manager';
 import { EvaluationCache, DEFAULT_CACHE_CONFIG, createEvaluationCache } from './caching/evaluation-cache';
 import { MetricsRegistry, metricsRegistry } from './metrics/custom-metrics';
+import { EvaluationStore } from './database/evaluation-store';
 
 export class EvalRunner {
   private registry: Registry;
@@ -17,6 +18,7 @@ export class EvalRunner {
   private costManager: CostManager;
   private cache: EvaluationCache;
   private metricsRegistry: MetricsRegistry;
+  private store: EvaluationStore;
 
   constructor(registryPath?: string, cacheConfig?: Partial<CacheConfig>) {
     this.registry = new Registry(registryPath);
@@ -24,6 +26,7 @@ export class EvalRunner {
     this.costManager = new CostManager();
     this.cache = createEvaluationCache(cacheConfig);
     this.metricsRegistry = metricsRegistry;
+    this.store = new EvaluationStore();
   }
 
   /**
@@ -33,7 +36,7 @@ export class EvalRunner {
     const startTime = Date.now();
     const runId = this.generateRunId();
 
-    console.log(`🚀 Starting evaluation: ${options.eval} with model: ${options.model}`);
+    console.log(`Starting evaluation: ${options.eval} with model: ${options.model}`);
 
     try {
       // Load registry
@@ -59,7 +62,9 @@ export class EvalRunner {
 
       // Load dataset
       const datasetPath = this.registry.getDatasetPath(options.eval);
-      console.log(`📊 Loading dataset from: ${datasetPath}`);
+      if (options.verbose) {
+        console.log(`Loading dataset from: ${datasetPath}`);
+      }
       const dataset = await loadDataset(datasetPath);
 
       // Limit samples if specified
@@ -67,18 +72,18 @@ export class EvalRunner {
         ? dataset.samples.slice(0, options.max_samples)
         : dataset.samples;
 
-      console.log(`📝 Evaluating ${samples.length} samples`);
+      console.log(`Evaluating ${samples.length} samples`);
 
       // Create LLM client and template (skip in dry run mode)
       let llmClient: any = null;
       let template: any = null;
 
       if (!options.dry_run) {
-        llmClient = createLLMClient(options.model);
+        llmClient = createLLMClient(options.model, options.timeout);
         
         // Create grading client (use different model if specified)
         const gradingClient = config.args.grading_model 
-          ? createLLMClient(config.args.grading_model)
+          ? createLLMClient(config.args.grading_model, options.timeout)
           : llmClient;
 
         // Create evaluation template
@@ -91,13 +96,20 @@ export class EvalRunner {
 
       for (let i = 0; i < samples.length; i++) {
         const sample = samples[i];
-        console.log(`\r⏳ Progress: ${i + 1}/${samples.length} (${Math.round((i + 1) / samples.length * 100)}%)`);
+        if (options.verbose) {
+          console.log(`Progress: ${i + 1}/${samples.length} (${Math.round((i + 1) / samples.length * 100)}%)`);
+        } else {
+          // Simple progress indicator
+          process.stdout.write(`\r${i + 1}/${samples.length}`);
+        }
 
         if (options.dry_run) {
           // Skip actual completion for dry run
-          console.log(`[DRY RUN] Sample ${i + 1}:`);
-          console.log(`  Input: ${JSON.stringify(sample.input)}`);
-          console.log(`  Expected: ${JSON.stringify(sample.ideal)}`);
+          if (options.verbose) {
+            console.log(`[DRY RUN] Sample ${i + 1}:`);
+            console.log(`  Input: ${JSON.stringify(sample.input)}`);
+            console.log(`  Expected: ${JSON.stringify(sample.ideal)}`);
+          }
           
           // Create a mock result for dry run
           const dryRunResult: EvalResult = {
@@ -220,6 +232,11 @@ export class EvalRunner {
         }
       }
 
+      // Clear progress line if not in verbose mode
+      if (!options.verbose) {
+        process.stdout.write('\n');
+      }
+
       // Calculate final metrics
       const totalSamples = results.length;
       const correct = results.filter(r => r.passed).length;
@@ -287,10 +304,9 @@ export class EvalRunner {
         created_at: new Date().toISOString(),
       });
 
-      // Save log file
-      if (options.log_to_file) {
-        await this.logger.saveToFile(options.log_to_file, runId);
-      }
+      // Always save log file (generate path if not provided)
+      const logPath = options.log_to_file || Logger.generateLogPath(runId, options.model, options.eval);
+      await this.logger.saveToFile(logPath, runId);
 
       console.log('\n' + '='.repeat(50));
       console.log(`🎯 Final Results:`);
@@ -300,25 +316,30 @@ export class EvalRunner {
       console.log(`   Accuracy: ${(score * 100).toFixed(2)}%`);
       console.log(`   Duration: ${((Date.now() - startTime) / 1000).toFixed(2)}s`);
       
-      // Display token usage if available
+      // Display simplified token usage if available
       if (tokenUsage) {
         console.log('');
         console.log(`📊 Token Usage:`);
-        console.log(`   • Prompt tokens: ${tokenUsage.total_prompt_tokens.toLocaleString()}`);
-        console.log(`   • Completion tokens: ${tokenUsage.total_completion_tokens.toLocaleString()}`);
-        console.log(`   • Total tokens: ${tokenUsage.total_tokens.toLocaleString()}`);
+        console.log(`   • Prompt tokens: ${tokenUsage.total_prompt_tokens}`);
+        console.log(`   • Completion tokens: ${tokenUsage.total_completion_tokens}`);
+        console.log(`   • Total tokens: ${tokenUsage.total_tokens}`);
         console.log(`   • Avg tokens/sample: ${tokenUsage.average_tokens_per_sample}`);
-        console.log(`   • Range: ${tokenUsage.min_tokens_per_sample} - ${tokenUsage.max_tokens_per_sample} tokens`);
+        
+        if (options.verbose) {
+          console.log(`   • Range: ${tokenUsage.min_tokens_per_sample} - ${tokenUsage.max_tokens_per_sample} tokens`);
+        }
         
         if (tokenUsage.estimated_cost > 0) {
-          console.log('');
-          console.log(`💰 Estimated Cost:`);
-          console.log(`   • Total: $${tokenUsage.estimated_cost.toFixed(4)}`);
-          if (tokenUsage.cost_breakdown) {
-            console.log(`   • Prompt cost: $${tokenUsage.cost_breakdown.prompt_cost.toFixed(4)}`);
-            console.log(`   • Completion cost: $${tokenUsage.cost_breakdown.completion_cost.toFixed(4)}`);
+          if (options.verbose) {
+            console.log('');
+            console.log(`💰 Estimated Cost:`);
+            console.log(`   • Total: $${tokenUsage.estimated_cost.toFixed(4)}`);
+            if (tokenUsage.cost_breakdown) {
+              console.log(`   • Prompt cost: $${tokenUsage.cost_breakdown.prompt_cost.toFixed(4)}`);
+              console.log(`   • Completion cost: $${tokenUsage.cost_breakdown.completion_cost.toFixed(4)}`);
+            }
+            console.log(`   • Cost per sample: $${(tokenUsage.estimated_cost / totalSamples).toFixed(4)}`);
           }
-          console.log(`   • Cost per sample: $${(tokenUsage.estimated_cost / totalSamples).toFixed(4)}`);
         }
       }
 
@@ -327,44 +348,65 @@ export class EvalRunner {
         console.log('');
         console.log(`📈 Custom Metrics:`);
         
-        // Group by category
-        const metricsByCategory = customMetrics.reduce((acc, metric) => {
-          if (!acc[metric.category]) acc[metric.category] = [];
-          acc[metric.category].push(metric);
-          return acc;
-        }, {} as Record<string, CustomMetricResult[]>);
+        if (options.verbose) {
+          // Group by category for verbose display
+          const metricsByCategory = customMetrics.reduce((acc, metric) => {
+            if (!acc[metric.category]) acc[metric.category] = [];
+            acc[metric.category].push(metric);
+            return acc;
+          }, {} as Record<string, CustomMetricResult[]>);
 
-        for (const [category, metrics] of Object.entries(metricsByCategory)) {
-          console.log(`   ${this.getCategoryEmoji(category)} ${category.toUpperCase()}:`);
-          for (const metric of metrics) {
+          for (const [category, metrics] of Object.entries(metricsByCategory)) {
+            console.log(`   ${this.getCategoryEmoji(category)} ${category.toUpperCase()}:`);
+            for (const metric of metrics) {
+              const trend = metric.higher_is_better ? '↗️' : '↙️';
+              console.log(`      ${trend} ${metric.display_name}: ${this.formatMetricValue(metric.value)}`);
+              if (metric.description) {
+                console.log(`         ${metric.description}`);
+              }
+            }
+          }
+        } else {
+          // Simple display for non-verbose mode
+          for (const metric of customMetrics) {
             const trend = metric.higher_is_better ? '↗️' : '↙️';
             console.log(`      ${trend} ${metric.display_name}: ${this.formatMetricValue(metric.value)}`);
-            if (options.verbose && metric.description) {
-              console.log(`         ${metric.description}`);
-            }
           }
         }
       }
 
-      // Display cache statistics
-      try {
-        const cacheStats = await this.cache.getCacheStats();
-        if (cacheStats.total_requests > 0) {
-          console.log('');
-          console.log(`💾 Cache Performance:`);
-          console.log(`   • Requests: ${cacheStats.total_requests}`);
-          console.log(`   • Hits: ${cacheStats.cache_hits}`);
-          console.log(`   • Hit rate: ${(cacheStats.hit_rate * 100).toFixed(1)}%`);
-          if (cacheStats.hit_rate > 0) {
-            const savedTokens = Math.round(cacheStats.cache_hits * (tokenUsage?.average_tokens_per_sample || 100));
-            console.log(`   • Est. tokens saved: ${savedTokens.toLocaleString()}`);
+      // Display cache statistics only in verbose mode
+      if (options.verbose) {
+        try {
+          const cacheStats = await this.cache.getCacheStats();
+          if (cacheStats.total_requests > 0) {
+            console.log('');
+            console.log(`💾 Cache Performance:`);
+            console.log(`   • Requests: ${cacheStats.total_requests}`);
+            console.log(`   • Hits: ${cacheStats.cache_hits}`);
+            console.log(`   • Hit rate: ${(cacheStats.hit_rate * 100).toFixed(1)}%`);
+            if (cacheStats.hit_rate > 0) {
+              const savedTokens = Math.round(cacheStats.cache_hits * (tokenUsage?.average_tokens_per_sample || 100));
+              console.log(`   • Est. tokens saved: ${savedTokens.toLocaleString()}`);
+            }
           }
+        } catch (error) {
+          // Silently ignore cache stats errors
         }
-      } catch (error) {
-        // Silently ignore cache stats errors
       }
       
       console.log('='.repeat(50));
+
+      // Save evaluation results to database
+      try {
+        const totalCost = tokenUsage?.estimated_cost || 0;
+        await this.store.saveEvaluation(report, totalCost);
+        if (options.verbose) {
+          console.log('💾 Evaluation results saved to database');
+        }
+      } catch (error) {
+        console.warn(`⚠️  Failed to save to database: ${error instanceof Error ? error.message : String(error)}`);
+      }
 
       return report;
 
@@ -466,6 +508,13 @@ export class EvalRunner {
     } else {
       return Math.round(value).toLocaleString();
     }
+  }
+
+  /**
+   * Save logs to file
+   */
+  async saveToFile(filePath: string, runId: string): Promise<void> {
+    await this.logger.saveToFile(filePath, runId);
   }
 
   /**

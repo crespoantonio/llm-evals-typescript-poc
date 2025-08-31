@@ -133,6 +133,10 @@ export class Logger {
       fs.mkdirSync(logsDir, { recursive: true });
     }
 
-    return path.join(logsDir, `${runId}_${model}_${evalName}.jsonl`);
+    // Sanitize model name for Windows file system (replace : with -)
+    const sanitizedModel = model.replace(/[:<>"|?*]/g, '-').replace(/\//g, '-');
+    const sanitizedEval = evalName.replace(/[:<>"|?*]/g, '-');
+
+    return path.join(logsDir, `${runId}_${sanitizedModel}_${sanitizedEval}.jsonl`);
   }
 }

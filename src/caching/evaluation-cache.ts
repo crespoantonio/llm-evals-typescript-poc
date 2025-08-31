@@ -5,7 +5,7 @@ let Redis: any = null;
 try {
   Redis = require('redis');
 } catch (e) {
-  console.log('Redis not available, using in-memory cache');
+  // Redis not available, will use in-memory cache silently
 }
 
 export interface CacheConfig {

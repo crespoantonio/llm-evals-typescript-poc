@@ -6,7 +6,7 @@ A **production-ready AI quality assurance platform** for evaluating Large Langua
 
 ### **Core Evaluation Engine**
 - 🎯 **Multiple Evaluation Types**: Basic deterministic matching, model-graded evaluations, structured choice-based grading, and semantic similarity evaluation
-- 🔧 **Multi-Provider LLM Support**: Built-in support for OpenAI, Ollama (local models), HuggingFace (100,000+ community models), extensible for Anthropic and custom providers
+- 🔧 **Multi-Provider LLM Support**: Built-in support for OpenAI, Ollama (local models), HuggingFace (100,000+ community models via official @huggingface/inference), extensible for Anthropic and custom providers
 - ⚙️ **YAML Configuration**: Declarative evaluation definitions with flexible templating
 - 🚀 **CLI Interface**: Powerful command-line tool with dry-run, verbose logging, and batch processing
 - 💾 **Intelligent Caching**: Redis/in-memory caching with smart invalidation reduces API costs by up to 80%
@@ -86,7 +86,7 @@ export OPENAI_API_KEY="your-api-key-here"
 npx ts-node src/cli.ts list
 
 # 4. Run your first evaluation
-npx ts-node src/cli.ts gpt-3.5-turbo math-basic --max-samples 5
+npx ts-node src/cli.ts gpt-4 math-basic --max-samples 5
 
 # Output:
 # 🧠 LLM Evaluation Framework
@@ -95,8 +95,8 @@ npx ts-node src/cli.ts gpt-3.5-turbo math-basic --max-samples 5
 # 🎯 Final Score: 80.0%
 
 # 5. Try different model providers
-npx ts-node src/cli.ts ollama/llama2 math-basic --max-samples 3          # Local models (free)
-npx ts-node src/cli.ts hf/google/flan-t5-large math-basic --max-samples 3 # HuggingFace models
+npx ts-node src/cli.ts ollama/llama3.1 math-basic --max-samples 3          # Local models (free)
+npx ts-node src/cli.ts hf/meta-llama/Llama-3.2-3B-Instruct math-basic --max-samples 3 # HuggingFace models (official @huggingface/inference)
 npx ts-node src/cli.ts gpt-4 math-basic --max-samples 3                  # OpenAI models
 ```
 
@@ -302,7 +302,7 @@ npx ts-node src/cli.ts ollama/llama2 math-basic
 npx ts-node src/cli.ts ollama/codellama sql-basic
 npx ts-node src/cli.ts ollama/mistral toxicity
 
-# HuggingFace Models (optional HUGGINGFACE_API_KEY for better performance)
+# HuggingFace Models (official @huggingface/inference library, optional HUGGINGFACE_API_KEY for better performance)
 npx ts-node src/cli.ts hf/google/flan-t5-large math-basic
 npx ts-node src/cli.ts hf/microsoft/DialoGPT-large toxicity
 npx ts-node src/cli.ts hf/codellama/CodeLlama-7b-Instruct-hf sql-basic
@@ -348,7 +348,7 @@ npx ts-node src/cli.ts metrics test demo
 # Basic evaluation with different providers
 npx ts-node src/cli.ts gpt-3.5-turbo math-basic --max-samples 10          # OpenAI
 npx ts-node src/cli.ts ollama/llama2 math-basic --max-samples 10           # Local Ollama
-npx ts-node src/cli.ts hf/google/flan-t5-large math-basic --max-samples 10 # HuggingFace
+npx ts-node src/cli.ts hf/meta-llama/Llama-3.2-3B-Instruct math-basic --max-samples 10 # HuggingFace (official library)
 
 # Advanced evaluation with full logging
 npx ts-node src/cli.ts gpt-4 safety-comprehensive \
@@ -604,9 +604,9 @@ const gpt35Client = createLLMClient('gpt-3.5-turbo');
 const llamaClient = createLLMClient('ollama/llama2');
 const codelamaClient = createLLMClient('ollama/codellama');
 
-// HuggingFace models (community, free tier available)
-const flanClient = createLLMClient('hf/google/flan-t5-large');
-const dialogClient = createLLMClient('hf/microsoft/DialoGPT-large');
+// HuggingFace models (community, free tier available, official @huggingface/inference)
+const llamaClient = createLLMClient('hf/meta-llama/Llama-3.2-3B-Instruct');
+const mistralClient = createLLMClient('hf/mistralai/Mistral-7B-Instruct-v0.3');
 ```
 
 ### **Custom LLM Clients**

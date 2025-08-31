@@ -28,6 +28,14 @@ export class EvaluationStore {
 
   private createDatabase(dbPath: string): Database {
     try {
+      // Ensure directory exists before creating database
+      const path = require('path');
+      const fs = require('fs');
+      const dir = path.dirname(dbPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
       // Try to load sqlite3 dynamically
       const sqlite3 = require('sqlite3');
       return new sqlite3.Database(dbPath);
