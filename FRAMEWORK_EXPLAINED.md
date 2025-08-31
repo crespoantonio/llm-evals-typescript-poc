@@ -631,6 +631,133 @@ export class BasicEval implements EvalTemplate {
 }
 ```
 
+**The Four Match Types Explained:**
+
+**🎯 Exact Match (`match_type: 'exact'`)** - Most strict
+- Requires **perfect text matching** (with optional case sensitivity)
+- Most common for factual answers and structured data
+- **When to use**: Math problems, specific facts, multiple choice answers
+
+```typescript
+// Example: Math evaluation
+// Expected: "42"
+// Model says: "42" → ✅ PASS
+// Model says: "The answer is 42" → ❌ FAIL (extra text)
+// Model says: "forty-two" → ❌ FAIL (different representation)
+```
+
+```yaml
+# YAML configuration example
+math-basic:
+  class: BasicEval
+  args:
+    samples_jsonl: math/basic.jsonl
+    match_type: exact
+    case_sensitive: false  # "Paris" matches "PARIS"
+```
+
+**🔍 Includes Match (`match_type: 'includes'`)** - Substring matching
+- Passes if expected answer is **found anywhere** in the response
+- Useful when answers may be embedded in longer explanations
+- **When to use**: When models provide explanations with correct answers
+
+```typescript
+// Example: Embedded answers
+// Expected: "Paris"
+// Model says: "The capital of France is Paris" → ✅ PASS
+// Model says: "Paris is the capital" → ✅ PASS  
+// Model says: "The capital is London" → ❌ FAIL
+```
+
+```yaml
+# YAML configuration example
+geography-qa:
+  class: BasicEval
+  args:
+    samples_jsonl: geography/questions.jsonl
+    match_type: includes
+    case_sensitive: false
+```
+
+**🧩 Fuzzy Match (`match_type: 'fuzzy'`)** - Similarity-based
+- Uses **Jaccard similarity** with 0.8 threshold for word overlap
+- Handles variations in phrasing and word order
+- **When to use**: SQL queries, code, or text where variations are acceptable
+
+```typescript
+// Example: SQL variations
+// Expected: "SELECT name FROM users WHERE age > 18"
+// Model says: "SELECT name FROM users WHERE age > 18;" → ✅ PASS (extra semicolon)
+// Model says: "select name from users where age > 18" → ✅ PASS (case difference)
+// Model says: "SELECT user_name FROM people WHERE age > 18" → ❌ FAIL (different words)
+```
+
+```yaml
+# YAML configuration example  
+sql-basic:
+  class: BasicEval
+  args:
+    samples_jsonl: sql/basic.jsonl
+    match_type: fuzzy
+    case_sensitive: false
+```
+
+**🔤 Regex Match (`match_type: 'regex'`)** - Pattern matching
+- Treats expected answers as **regular expression patterns**
+- Most flexible for complex validation requirements
+- **When to use**: Format validation, phone numbers, emails, structured patterns
+
+```typescript
+// Example: Phone number formats
+// Expected: "\\d{3}-\\d{3}-\\d{4}"  (regex pattern)
+// Model says: "123-456-7890" → ✅ PASS
+// Model says: "(123) 456-7890" → ❌ FAIL (wrong format)
+// Model says: "Call me at 123-456-7890" → ✅ PASS (contains valid format)
+```
+
+```yaml
+# YAML configuration example
+format-validation:
+  class: BasicEval  
+  args:
+    samples_jsonl: formats/validation.jsonl
+    match_type: regex
+    case_sensitive: true  # Regex patterns are case-sensitive
+```
+
+**📋 Multi-Answer Support:**
+
+All match types automatically support **multiple ideal answers**:
+
+```yaml
+# Multiple acceptable answers with any match type
+multi-format-eval:
+  class: BasicEval
+  args:
+    samples_jsonl: multi/answers.jsonl  
+    match_type: includes  # Works with any match_type!
+    case_sensitive: false
+```
+
+```jsonl
+// Dataset with multiple acceptable answers
+{"input": [{"role": "user", "content": "What are ways to greet someone?"}], "ideal": ["Hello", "Hi", "Hey", "Good morning"]}
+{"input": [{"role": "user", "content": "Name programming languages"}], "ideal": ["Python", "JavaScript", "Java", "C++"]}
+```
+
+**Behavior**: Evaluation **passes if ANY** ideal answer matches using the specified `match_type`.
+
+**🎨 Match Type Selection Guide:**
+
+| Use Case | Match Type | Example |
+|----------|------------|---------|
+| Math problems | `exact` | "42" must be exactly "42" |
+| Geography facts | `includes` | "Paris" found in "The capital is Paris" |
+| SQL queries | `fuzzy` | Similar queries with syntax variations |
+| Format validation | `regex` | Phone numbers, emails, structured data |
+| Multiple choice | `exact` + multiple ideals | Any of ["A", "Option A", "Choice A"] |
+| Code snippets | `fuzzy` | Similar logic, different formatting |
+
 #### Model-Graded Evaluation (`src/templates/model-graded-eval.ts`)
 
 **What it does:** Uses another AI to grade the first AI's response.
