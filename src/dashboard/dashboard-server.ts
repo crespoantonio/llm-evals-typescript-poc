@@ -242,6 +242,30 @@ export class DashboardServer {
       }
     });
 
+    // Get list of recent evaluation runs
+    this.app.get('/api/evaluations/runs', async (req: any, res: any) => {
+      try {
+        const days = parseInt(req.query.days) || 30;
+        const runs = await this.store.getEvaluationRunsList(days);
+        res.json(runs);
+      } catch (error) {
+        console.error('Error getting evaluation runs:', error);
+        res.status(500).json({ error: 'Failed to get evaluation runs' });
+      }
+    });
+
+    // Get detailed results for a specific evaluation run
+    this.app.get('/api/evaluations/:runId/details', async (req: any, res: any) => {
+      try {
+        const runId = req.params.runId;
+        const details = await this.store.getEvaluationDetails(runId);
+        res.json(details);
+      } catch (error) {
+        console.error('Error getting evaluation details:', error);
+        res.status(500).json({ error: 'Failed to get evaluation details' });
+      }
+    });
+
     // Health check endpoint
     this.app.get('/api/health', async (req: any, res: any) => {
       res.json({
@@ -402,6 +426,87 @@ export class DashboardServer {
             .status-healthy { color: #28a745; font-weight: bold; }
             .status-warning { color: #ffc107; font-weight: bold; }
             .status-error { color: #dc3545; font-weight: bold; }
+            
+            /* Evaluation Details Styles */
+            .evaluation-selector {
+                margin-bottom: 20px;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 10px;
+            }
+            .evaluation-selector select {
+                padding: 10px;
+                border-radius: 5px;
+                border: 1px solid #ddd;
+                font-size: 1rem;
+                width: 100%;
+                max-width: 400px;
+            }
+            .detail-item {
+                background: white;
+                margin: 15px 0;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                border-left: 4px solid #007bff;
+            }
+            .detail-item.passed {
+                border-left-color: #28a745;
+            }
+            .detail-item.failed {
+                border-left-color: #dc3545;
+            }
+            .detail-header {
+                display: flex;
+                justify-content: between;
+                align-items: center;
+                margin-bottom: 15px;
+                font-weight: bold;
+            }
+            .detail-section {
+                margin: 10px 0;
+                padding: 10px;
+                background: #f8f9fa;
+                border-radius: 5px;
+            }
+            .detail-section h4 {
+                margin: 0 0 8px 0;
+                color: #495057;
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                font-weight: bold;
+            }
+            .detail-content {
+                font-family: 'Courier New', monospace;
+                font-size: 0.9rem;
+                color: #333;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+            .passed-badge {
+                background: #28a745;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.8rem;
+                font-weight: bold;
+            }
+            .failed-badge {
+                background: #dc3545;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.8rem;
+                font-weight: bold;
+            }
+            .score-badge {
+                background: #6c757d;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.8rem;
+                font-weight: bold;
+            }
         </style>
     </head>
     <body>
@@ -412,6 +517,7 @@ export class DashboardServer {
                 <div>
                     <button onclick="refreshData()">🔄 Refresh Data</button>
                     <button onclick="togglePeriod()">📅 Toggle Period</button>
+                    <button onclick="showEvaluationDetails()">🔍 Evaluation Details</button>
                     <button onclick="showEndpoints()">🔌 Show API Endpoints</button>
                 </div>
             </div>
@@ -642,6 +748,162 @@ export class DashboardServer {
                 const endpointsCard = renderAPIEndpointsCard();
                 document.getElementById('dashboard').innerHTML = endpointsCard + 
                     '<div class="card"><button onclick="renderDashboard()">← Back to Dashboard</button></div>';
+            }
+
+            // ========== EVALUATION DETAILS FUNCTIONS ==========
+            
+            async function showEvaluationDetails() {
+                try {
+                    const runs = await fetchEvaluationRuns();
+                    renderEvaluationSelector(runs);
+                } catch (error) {
+                    console.error('Error loading evaluation runs:', error);
+                    document.getElementById('dashboard').innerHTML = 
+                        '<div class="card"><div class="error">Failed to load evaluation runs</div></div>';
+                }
+            }
+            
+            async function fetchEvaluationRuns() {
+                const response = await fetch('/api/evaluations/runs');
+                if (!response.ok) throw new Error('Failed to fetch evaluation runs');
+                return await response.json();
+            }
+            
+            async function fetchEvaluationDetails(runId) {
+                const response = await fetch(\`/api/evaluations/\${runId}/details\`);
+                if (!response.ok) throw new Error('Failed to fetch evaluation details');
+                return await response.json();
+            }
+            
+            function renderEvaluationSelector(runs) {
+                const dashboardElement = document.getElementById('dashboard');
+                
+                if (!runs || runs.length === 0) {
+                    dashboardElement.innerHTML = \`
+                        <div class="card">
+                            <h2><span class="icon">🔍</span>Evaluation Details</h2>
+                            <div class="loading">No evaluations found in the last 30 days</div>
+                            <button onclick="renderDashboard()">← Back to Dashboard</button>
+                        </div>
+                    \`;
+                    return;
+                }
+                
+                const options = runs.map(run => {
+                    const date = new Date(run.created_at).toLocaleString();
+                    const accuracy = (run.score * 100).toFixed(1);
+                    return \`<option value="\${run.run_id}">
+                        \${run.eval_name} | \${run.model} | \${accuracy}% | \${date}
+                    </option>\`;
+                }).join('');
+                
+                dashboardElement.innerHTML = \`
+                    <div class="card">
+                        <h2><span class="icon">🔍</span>Evaluation Details</h2>
+                        <div class="evaluation-selector">
+                            <label for="runSelector"><strong>Select an evaluation to view details:</strong></label><br><br>
+                            <select id="runSelector" onchange="loadEvaluationDetails()">
+                                <option value="">Choose an evaluation...</option>
+                                \${options}
+                            </select>
+                        </div>
+                        <button onclick="renderDashboard()">← Back to Dashboard</button>
+                        <div id="evaluationDetails"></div>
+                    </div>
+                \`;
+            }
+            
+            async function loadEvaluationDetails() {
+                const runId = document.getElementById('runSelector').value;
+                const detailsContainer = document.getElementById('evaluationDetails');
+                
+                if (!runId) {
+                    detailsContainer.innerHTML = '';
+                    return;
+                }
+                
+                detailsContainer.innerHTML = '<div class="loading">Loading evaluation details...</div>';
+                
+                try {
+                    const details = await fetchEvaluationDetails(runId);
+                    renderEvaluationDetails(details);
+                } catch (error) {
+                    console.error('Error loading evaluation details:', error);
+                    detailsContainer.innerHTML = '<div class="error">Failed to load evaluation details</div>';
+                }
+            }
+            
+            function renderEvaluationDetails(details) {
+                const detailsContainer = document.getElementById('evaluationDetails');
+                
+                if (!details || details.length === 0) {
+                    detailsContainer.innerHTML = '<div class="loading">No details found for this evaluation</div>';
+                    return;
+                }
+                
+                const detailsHtml = details.map((detail, index) => {
+                    const passed = detail.passed === 1;
+                    const passedClass = passed ? 'passed' : 'failed';
+                    const badge = passed ? 
+                        '<span class="passed-badge">✓ PASSED</span>' : 
+                        '<span class="failed-badge">✗ FAILED</span>';
+                    const scoreBadge = \`<span class="score-badge">Score: \${detail.score}</span>\`;
+                    
+                    // Parse input if it's JSON (chat messages format)
+                    let inputDisplay = detail.input_text;
+                    try {
+                        const parsed = JSON.parse(detail.input_text);
+                        if (Array.isArray(parsed)) {
+                            inputDisplay = parsed.map(msg => \`**\${msg.role.toUpperCase()}:** \${msg.content}\`).join('\\n\\n');
+                        }
+                    } catch (e) {
+                        // Keep original if not JSON
+                    }
+                    
+                    return \`
+                        <div class="detail-item \${passedClass}">
+                            <div class="detail-header">
+                                <span>Sample \${index + 1}: \${detail.sample_id}</span>
+                                <span>\${badge} \${scoreBadge}</span>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4>📝 Input Prompt</h4>
+                                <div class="detail-content">\${inputDisplay}</div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4>🎯 Expected Response</h4>
+                                <div class="detail-content">\${detail.ideal_response}</div>
+                            </div>
+                            
+                            <div class="detail-section">
+                                <h4>🤖 Model Output</h4>
+                                <div class="detail-content">\${detail.actual_response}</div>
+                            </div>
+                            
+                            \${detail.reasoning ? \`
+                                <div class="detail-section">
+                                    <h4>🧠 Evaluation Reasoning</h4>
+                                    <div class="detail-content">\${detail.reasoning}</div>
+                                </div>
+                            \` : ''}
+                        </div>
+                    \`;
+                }).join('');
+                
+                const summaryInfo = details.length > 0 ? \`
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <strong>📊 Summary:</strong> 
+                        \${details[0].eval_name} | \${details[0].model} | 
+                        \${details.length} samples | 
+                        \${details.filter(d => d.passed === 1).length} passed | 
+                        \${details.filter(d => d.passed === 0).length} failed
+                        <br><strong>Run Date:</strong> \${new Date(details[0].run_created_at).toLocaleString()}
+                    </div>
+                \` : '';
+                
+                detailsContainer.innerHTML = summaryInfo + detailsHtml;
             }
 
             // Auto-refresh every 30 seconds

@@ -400,9 +400,17 @@ export class EvalRunner {
       // Save evaluation results to database
       try {
         const totalCost = tokenUsage?.estimated_cost || 0;
+        
+        // Save the evaluation summary
         await this.store.saveEvaluation(report, totalCost);
+        
+        // Save individual results details
+        await this.store.saveEvaluationResults(report.run_id, results);
+        
         if (options.verbose) {
           console.log('💾 Evaluation results saved to database');
+          console.log(`   • Summary saved to eval_runs`);
+          console.log(`   • ${results.length} individual results saved to eval_results`);
         }
       } catch (error) {
         console.warn(`⚠️  Failed to save to database: ${error instanceof Error ? error.message : String(error)}`);

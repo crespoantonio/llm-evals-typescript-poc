@@ -6,6 +6,7 @@ interface Database {
   run(sql: string, params?: any[], callback?: (err: Error | null) => void): void;
   get(sql: string, params: any[], callback: (err: Error | null, row: any) => void): void;
   all(sql: string, params: any[], callback: (err: Error | null, rows: any[]) => void): void;
+  prepare?(sql: string): any; // Optional prepared statement support
 }
 
 export interface EvaluationTrend {
@@ -113,6 +114,13 @@ export class EvaluationStore {
 
   async saveEvaluation(report: EvalReport, cost?: number): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Include token_usage and custom_metrics in metadata for analytics
+      const enrichedMetadata = {
+        ...report.metadata,
+        token_usage: report.token_usage,
+        custom_metrics: report.custom_metrics
+      };
+
       this.db.run(
         `INSERT INTO eval_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -126,10 +134,81 @@ export class EvaluationStore {
           report.duration_ms,
           cost || 0,
           report.created_at,
-          JSON.stringify(report.metadata || {})
+          JSON.stringify(enrichedMetadata)
         ],
         (err: Error | null) => err ? reject(err) : resolve()
       );
+    });
+  }
+
+  async saveEvaluationResults(runId: string, results: EvalResult[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Insert all results in a single transaction
+      const stmt = this.db.prepare?.(`INSERT INTO eval_results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      
+      if (stmt) {
+        // Use prepared statement for better performance
+        for (let i = 0; i < results.length; i++) {
+          const result = results[i];
+          const resultId = `${runId}_result_${i}`;
+          
+          stmt.run([
+            resultId,
+            runId,
+            result.sample_id || `sample_${i}`,
+            typeof result.input === 'string' ? result.input : JSON.stringify(result.input),
+            typeof result.ideal === 'string' ? result.ideal : JSON.stringify(result.ideal),
+            result.completion?.content || '',
+            result.score,
+            result.passed ? 1 : 0,
+            result.reasoning || '',
+            null, // latency_ms - not available in current EvalResult interface
+            JSON.stringify(result.metadata || {})
+          ]);
+        }
+        stmt.finalize((err: Error | null) => err ? reject(err) : resolve());
+      } else {
+        // Fallback for databases that don't support prepared statements
+        let completed = 0;
+        const total = results.length;
+        
+        if (total === 0) {
+          resolve();
+          return;
+        }
+        
+        for (let i = 0; i < results.length; i++) {
+          const result = results[i];
+          const resultId = `${runId}_result_${i}`;
+          
+          this.db.run(
+            `INSERT INTO eval_results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              resultId,
+              runId,
+              result.sample_id || `sample_${i}`,
+              typeof result.input === 'string' ? result.input : JSON.stringify(result.input),
+              typeof result.ideal === 'string' ? result.ideal : JSON.stringify(result.ideal),
+              result.completion?.content || '',
+              result.score,
+              result.passed ? 1 : 0,
+              result.reasoning || '',
+              null, // latency_ms - not available in current EvalResult interface
+              JSON.stringify(result.metadata || {})
+            ],
+            (err: Error | null) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+              completed++;
+              if (completed === total) {
+                resolve();
+              }
+            }
+          );
+        }
+      }
     });
   }
 
@@ -192,6 +271,101 @@ export class EvaluationStore {
         WHERE model = ? AND eval_name = ?`,
         [model, evaluation],
         (err: Error | null, row: any) => err ? reject(err) : resolve(row)
+      );
+    });
+  }
+
+  /**
+   * Get recent evaluation reports with token data for analytics
+   */
+  async getRecentEvaluations(days: number = 30): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `SELECT 
+          id as run_id,
+          eval_name,
+          model,
+          score,
+          total_samples,
+          correct,
+          incorrect,
+          duration_ms,
+          cost_usd,
+          created_at,
+          metadata
+        FROM eval_runs 
+        WHERE created_at > datetime('now', '-${days} days')
+          AND metadata != '{}'
+        ORDER BY created_at DESC`,
+        [],
+        (err: Error | null, rows: any[]) => {
+          if (err) {
+            console.warn('Failed to get recent evaluations:', err);
+            resolve([]);
+            return;
+          }
+          resolve(rows || []);
+        }
+      );
+    });
+  }
+
+  /**
+   * Get detailed results for a specific evaluation run
+   */
+  async getEvaluationDetails(runId: string): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `SELECT 
+          er.*,
+          runs.eval_name,
+          runs.model,
+          runs.created_at as run_created_at
+        FROM eval_results er
+        JOIN eval_runs runs ON er.run_id = runs.id
+        WHERE er.run_id = ?
+        ORDER BY er.id`,
+        [runId],
+        (err: Error | null, rows: any[]) => {
+          if (err) {
+            console.warn('Failed to get evaluation details:', err);
+            resolve([]);
+            return;
+          }
+          resolve(rows || []);
+        }
+      );
+    });
+  }
+
+  /**
+   * Get list of recent evaluation runs for selection
+   */
+  async getEvaluationRunsList(days: number = 30): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `SELECT 
+          id as run_id,
+          eval_name,
+          model,
+          score,
+          total_samples,
+          correct,
+          incorrect,
+          created_at,
+          duration_ms
+        FROM eval_runs 
+        WHERE created_at > datetime('now', '-${days} days')
+        ORDER BY created_at DESC`,
+        [],
+        (err: Error | null, rows: any[]) => {
+          if (err) {
+            console.warn('Failed to get evaluation runs list:', err);
+            resolve([]);
+            return;
+          }
+          resolve(rows || []);
+        }
       );
     });
   }

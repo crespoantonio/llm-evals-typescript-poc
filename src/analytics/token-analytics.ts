@@ -225,9 +225,40 @@ export class TokenAnalyticsService {
    */
 
   private async getRecentReportsWithTokens(days: number): Promise<EvalReport[]> {
-    // This is a mock implementation
-    // In a real implementation, this would query the database
-    return [];
+    try {
+      const rows = await this.store.getRecentEvaluations(days);
+      
+      // Convert database rows to EvalReport objects
+      const reports: EvalReport[] = rows.map(row => {
+        let metadata: any = {};
+        try {
+          metadata = JSON.parse(row.metadata || '{}');
+        } catch (e) {
+          console.warn('Failed to parse metadata for row:', row.run_id);
+        }
+        
+        return {
+          run_id: row.run_id,
+          eval_name: row.eval_name,
+          model: row.model,
+          score: row.score,
+          total_samples: row.total_samples,
+          correct: row.correct,
+          incorrect: row.incorrect,
+          duration_ms: row.duration_ms,
+          created_at: row.created_at,
+          results: [], // Individual results not needed for analytics
+          token_usage: metadata.token_usage,
+          custom_metrics: metadata.custom_metrics,
+          metadata: metadata
+        };
+      }).filter(report => report.token_usage); // Only include reports with token usage data
+      
+      return reports;
+    } catch (error) {
+      console.warn('Failed to get recent reports with tokens:', error);
+      return [];
+    }
   }
 
   private getEmptyReport(): TokenAnalyticsReport {
