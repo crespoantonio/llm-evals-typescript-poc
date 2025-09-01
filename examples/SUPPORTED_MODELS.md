@@ -19,11 +19,13 @@ npx ts-node src/cli.ts claude-3-opus-20240229 sql-graded
 npx ts-node src/cli.ts claude-3-haiku-20240307 math-basic
 ```
 
-### Google Gemini
+## Google Gen AI (✅ Ready to use)
 ```bash
-# After adding GoogleClient:
-npx ts-node src/cli.ts gemini-pro math-basic
-npx ts-node src/cli.ts gemini-pro-vision sql-basic
+# Google Gemini Models (requires GEMINI_API_KEY)
+npx ts-node src/cli.ts gemini-2.0-flash-001 math-basic
+npx ts-node src/cli.ts gemini-1.5-pro math-basic
+npx ts-node src/cli.ts google/gemini-2.0-flash-001 sql-graded
+npx ts-node src/cli.ts genai/gemini-1.5-pro sql-basic
 ```
 
 ### Azure OpenAI

@@ -25,7 +25,7 @@ Este es tu **punto de partida**. Contiene:
 
 ### 🔧 **COMPONENTES BÁSICOS** 
 - [🚪 02. Punto de Entrada](./02-punto-de-entrada.md) - *Cómo está organizado todo*
-- [🤖 03. Cliente LLM](./03-cliente-llm.md) - *Conectándose con la IA*
+- [🤖 03. Cliente LLM](./03-cliente-llm.md) - *Conectándose con OpenAI, Google, Ollama, HuggingFace*
 - [📊 04. Cargador de Datos](./04-cargador-datos.md) - *Preparando preguntas y respuestas*
 
 ### 🎭 **EL CEREBRO DEL SISTEMA**
@@ -59,9 +59,9 @@ Este es tu **punto de partida**. Contiene:
 ### ⚡ **¡Tengo 2 horas!** (Ruta Rápida)  
 1. [📖 Introducción](./00-introduccion-al-framework.md) (15 min)
 2. [🔤 Tipos Fundamentales](./01-tipos-fundamentales.md) (20 min)
-3. [🤖 Cliente LLM](./03-cliente-llm.md) (25 min)
+3. [🤖 Cliente LLM](./03-cliente-llm.md) (30 min) 
 4. [🖥️ CLI](./08-interfaz-linea-comandos.md) (35 min)
-5. [🧪 Templates](./09-templates-evaluaciones.md) (45 min)
+5. [🧪 Templates](./09-templates-evaluaciones.md) (40 min)
 
 ### 📚 **¡Quiero ser un experto!** (Ruta Completa)
 👉 [**Sigue el Índice Maestro**](./00-indice-maestro.md) - Te guiará paso a paso

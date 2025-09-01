@@ -6,7 +6,7 @@ El **cliente LLM** es como un **traductor universal** que sabe hablar con difere
 
 **LLM** significa "Large Language Model" (Modelo de Lenguaje Grande) - es decir, los cerebros de IA como GPT-4, Claude, Llama, etc.
 
-## 🌍 Los Tres "Idiomas" que Maneja
+## 🌍 Los Cuatro "Idiomas" que Maneja
 
 ### 1. 🏢 OpenAI (GPT-4, GPT-3.5, etc.)
 **Es como:** Una empresa de traducción profesional de lujo
@@ -25,6 +25,12 @@ El **cliente LLM** es como un **traductor universal** que sabe hablar con difere
 - **Ventajas:** Miles de modelos diferentes, muchos gratis
 - **Desventajas:** Calidad variable, algunos son experimentales
 - **Cuándo usarlo:** Cuando quieres experimentar con modelos específicos
+
+### 4. 🔍 Google Gen AI (Gemini, modelos de Google)
+**Es como:** El servicio de traducción oficial de Google
+- **Ventajas:** Muy inteligente, integración con servicios de Google, multimodal
+- **Desventajas:** Cuesta dinero por cada uso, requiere API key
+- **Cuándo usarlo:** Cuando necesitas capacidades multimodales o integración con Google
 
 ## 🏗️ Cómo Funciona por Dentro
 
@@ -167,19 +173,103 @@ try {
 
 **Es como:** Intentar hablar formalmente primero, y si no funciona, cambiar a un lenguaje más simple.
 
+## 🔍 GoogleGenAIClient - El Servicio Oficial de Google
+
+### ¿Cómo se inicializa?
+```typescript
+const client = new GoogleGenAIClient('gemini-2.0-flash-001', 'tu-api-key', 120000);
+```
+
+**Parámetros:**
+- **Modelo:** `'gemini-2.0-flash-001'`, `'gemini-1.5-pro'`, etc.
+- **API Key:** Tu clave de Google AI Studio
+- **Timeout:** 120000ms (2 minutos por defecto)
+
+### 🌟 Características Especiales
+
+#### 🎭 Manejo Inteligente de Mensajes del Sistema
+**Problema:** Google Gen AI no acepta mensajes con role "system" como OpenAI.
+**Solución:** Los convierte automáticamente:
+```typescript
+// ❌ Esto falla en Google:
+const mensajes = [
+  { role: 'system', content: 'Eres un asistente matemático' },
+  { role: 'user', content: '¿Cuánto es 2+2?' }
+];
+
+// ✅ GoogleGenAIClient lo convierte a:
+generateParams = {
+  config: {
+    systemInstruction: 'Eres un asistente matemático'
+  },
+  contents: [
+    { role: 'user', parts: [{ text: '¿Cuánto es 2+2?' }] }
+  ]
+}
+```
+
+#### 🔄 Conversión de Roles Automática
+```typescript
+// Entrada (formato OpenAI):
+{ role: 'assistant', content: 'La respuesta es 4' }
+
+// Google Gen AI necesita:
+{ role: 'model', parts: [{ text: 'La respuesta es 4' }] }
+```
+
+**Es como:** Un traductor automático que convierte entre el "acento" de OpenAI y el "acento" de Google.
+
+#### 🚫 Manejo de Errores Específicos
+```typescript
+// Detecta errores específicos de Google:
+if (error.message.includes('API_KEY_INVALID')) {
+  throw new Error('Google Gen AI authentication failed. Check your GEMINI_API_KEY');
+}
+```
+
+### 🔧 Configuración Requerida
+
+```bash
+# En tu archivo .env:
+GEMINI_API_KEY=tu-clave-real-aqui
+```
+
+**🔑 Obtener API Key:**
+1. Ve a [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Crea una nueva API key
+3. Cópiala a tu archivo .env
+
+### 🎯 Patrones de Nombres Soportados
+```typescript
+// Todos estos funcionan:
+createLLMClient('gemini-2.0-flash-001')
+createLLMClient('google/gemini-1.5-pro')  
+createLLMClient('genai/gemini-2.0-flash-001')
+```
+
+### 💰 Gestión de Costos
+```typescript
+const resultado = await client.complete(mensajes);
+console.log('Tokens usados:', resultado.usage?.total_tokens);
+
+// Estimación de costo aproximada:
+// gemini-1.5-pro: ~$0.003 per 1K tokens
+// gemini-2.0-flash: ~$0.0015 per 1K tokens
+```
+
 ## 🏭 La Función Creadora Universal
 
 ```typescript
-export function createLLMClient(provider: string, model: string, options?: any): LLMClient
+export function createLLMClient(model: string, timeout?: number): LLMClient
 ```
 
 **Es como un factory automático:**
 ```typescript
-// ✅ Esto...
-const client = createLLMClient('openai', 'gpt-4');
-
-// ... es igual que esto, pero más fácil:
-const client = new OpenAIClient('gpt-4');
+// ✅ Todos estos funcionan:
+const openai = createLLMClient('gpt-4');
+const ollama = createLLMClient('ollama/llama2');
+const hf = createLLMClient('hf/google/flan-t5-large');
+const google = createLLMClient('gemini-2.0-flash-001');  // ← ¡NUEVO!
 ```
 
 **Ventajas:**
@@ -193,42 +283,52 @@ const client = new OpenAIClient('gpt-4');
 import { createLLMClient } from './llm-client';
 
 async function ejemploCompleto() {
-  // 1. Crear cliente (automáticamente detecta el tipo)
-  const cliente = createLLMClient('openai', 'gpt-4');
+  // 1. Crear diferentes clientes
+  const openai = createLLMClient('gpt-4');
+  const google = createLLMClient('gemini-2.0-flash-001');  // ← ¡NUEVO!
+  const ollama = createLLMClient('ollama/llama2');
   
-  // 2. Preparar conversación
+  // 2. Preparar conversación (¡mismo formato para todos!)
   const mensajes = [
     { role: 'system', content: 'Eres un asistente matemático' },
     { role: 'user', content: '¿Cuánto es 15 + 27?' }
   ];
   
-  // 3. Obtener respuesta
-  const resultado = await cliente.complete(mensajes, {
-    temperature: 0.0,    // Respuestas precisas
-    max_tokens: 50       // Respuesta corta
-  });
+  // 3. Comparar respuestas de diferentes modelos
+  console.log('🤖 OpenAI GPT-4:');
+  const resultadoOpenAI = await openai.complete(mensajes, { temperature: 0.0 });
+  console.log('Respuesta:', resultadoOpenAI.content);
+  console.log('Costo:', resultadoOpenAI.usage?.total_tokens * 0.00003);
   
-  // 4. Usar el resultado
-  console.log('Respuesta:', resultado.content);
-  console.log('Tokens usados:', resultado.usage?.total_tokens);
-  console.log('Costo estimado:', resultado.usage?.total_tokens * 0.00003); // $0.03 por 1K tokens
+  console.log('\n🔍 Google Gemini:');
+  const resultadoGoogle = await google.complete(mensajes, { temperature: 0.0 });
+  console.log('Respuesta:', resultadoGoogle.content);
+  console.log('Costo:', resultadoGoogle.usage?.total_tokens * 0.0015 / 1000);
+  
+  console.log('\n🏠 Ollama Local:');
+  const resultadoOllama = await ollama.complete(mensajes, { temperature: 0.0 });
+  console.log('Respuesta:', resultadoOllama.content);
+  console.log('Costo: GRATIS! 💰');
 }
 ```
 
 ## 🎯 Puntos Clave para Recordar
 
-1. **Un solo cliente para todos los proveedores** → Interfaz consistente
-2. **Manejo inteligente de errores** → Mensajes útiles, no códigos crípticos
-3. **Optimizaciones específicas** → Cada proveedor tiene sus peculiaridades
-4. **Extracción automática** → Para modelos de razonamiento complejos
-5. **Estimación de costos** → Para modelos que cobran por uso
-6. **Timeouts inteligentes** → Diferentes para cada tipo de servicio
+1. **Cuatro proveedores soportados** → OpenAI, Ollama, HuggingFace, y Google Gen AI
+2. **Interfaz consistente** → Mismo código funciona con cualquier proveedor
+3. **Manejo inteligente de errores** → Mensajes útiles, no códigos crípticos
+4. **Optimizaciones específicas** → Cada proveedor tiene sus peculiaridades
+5. **Conversión automática** → Google Gen AI maneja system messages de forma especial
+6. **Extracción automática** → Para modelos de razonamiento complejos (Ollama)
+7. **Estimación de costos** → Para modelos que cobran por uso
+8. **Timeouts inteligentes** → Diferentes para cada tipo de servicio
 
 ### 🚨 Cuidados Importantes
 
 - **API Keys son secretos** → Nunca los publiques en GitHub
-- **Los modelos locales son lentos** → Usa timeouts largos
-- **Los costos se acumulan** → Monitorea el uso de tokens
+- **Los modelos locales son lentos** → Usa timeouts largos (Ollama: 5 min)
+- **Los costos se acumulan** → Monitorea el uso de tokens (OpenAI, Google)
+- **Google tiene formato diferente** → Los system messages van en systemInstruction
 - **No todos los modelos son iguales** → Algunos son mejores para tareas específicas
 
 **¡Siguiente paso:** Vamos a ver cómo el framework carga y maneja los datasets de evaluación! 📊

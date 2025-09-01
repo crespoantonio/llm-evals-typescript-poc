@@ -5,6 +5,8 @@
 La **CLI** (Command Line Interface) es como una **varita mágica** que te permite controlar todo el framework con comandos simples. Imagina poder decir hechizos como:
 
 - `llm-eval gpt-4 math-basic` → "¡Evalúa GPT-4 con matemáticas básicas!"
+- `llm-eval gemini-2.0-flash-001 math-basic` → "¡Evalúa Google Gemini con matemáticas!"
+- `llm-eval ollama/llama2 math-basic` → "¡Evalúa Llama local con matemáticas!"
 - `llm-eval list` → "¡Muéstrame todas las evaluaciones disponibles!"
 - `llm-eval dashboard` → "¡Abre el dashboard mágico!"
 
@@ -274,20 +276,23 @@ llm-eval dashboard 8080
 # Registry personalizado
 llm-eval gpt-4 math-basic --registry ./mi-registry
 
-# Timeout personalizado (útil para modelos locales)
-llm-eval ollama/llama3.1 math-basic --timeout 300000  # 5 minutos
+# Diferentes modelos con sus timeouts recomendados
+llm-eval gemini-2.0-flash-001 math-basic --timeout 120000  # Google: 2 minutos
+llm-eval ollama/llama3.1 math-basic --timeout 300000      # Ollama: 5 minutos
+llm-eval hf/google/flan-t5-large math-basic --timeout 180000  # HuggingFace: 3 minutos
 
-# Temperatura personalizada
-llm-eval gpt-4 creative-writing --temperature 1.2  # Más creativo
+# Temperatura personalizada por modelo
+llm-eval gpt-4 creative-writing --temperature 1.2          # OpenAI más creativo
+llm-eval google/gemini-1.5-pro creative-writing --temperature 0.9  # Google creativo
 
 # Límite de tokens
-llm-eval gpt-4 short-answers --max-tokens 50
+llm-eval gemini-2.0-flash-001 short-answers --max-tokens 50
 
 # Semilla para reproducibilidad
 llm-eval gpt-4 math-basic --seed 42  # Siempre los mismos resultados
 
 # Logs personalizados
-llm-eval gpt-4 math-basic --log-to-file experimento-001.jsonl
+llm-eval google/gemini-1.5-pro math-basic --log-to-file experimento-gemini.jsonl
 ```
 
 ## 💡 Ejemplos de Workflows Reales
@@ -401,8 +406,10 @@ export REDIS_URL=redis://localhost:6379
 llm-eval gpt-4 math-basic  # Compartirá caché con el equipo
 
 # Timeouts apropiados por tipo de modelo
-llm-eval gpt-4 math-basic --timeout 60000           # OpenAI: 1 minuto
-llm-eval ollama/llama3.1 math-basic --timeout 300000  # Local: 5 minutos
+llm-eval gpt-4 math-basic --timeout 60000                 # OpenAI: 1 minuto
+llm-eval gemini-2.0-flash-001 math-basic --timeout 120000 # Google: 2 minutos
+llm-eval hf/google/flan-t5-large math-basic --timeout 180000  # HuggingFace: 3 minutos
+llm-eval ollama/llama3.1 math-basic --timeout 300000      # Ollama Local: 5 minutos
 ```
 
 ### 📊 Análisis Sistemático
@@ -417,13 +424,15 @@ llm-eval tokens trends production-eval 30
 
 ## 🎓 Puntos Clave para Recordar
 
-1. **La CLI es tu navaja suiza** → Un comando para cada necesidad
-2. **Dry run es tu mejor amigo** → Nunca gastes dinero sin probar
-3. **El verbose mode es para debugging** → Úsalo cuando algo falle
-4. **Los logs son oro** → Siempre especifica --log-to-file
-5. **El dashboard visualiza todo** → Para análisis complejos
-6. **La validación automática previene errores** → Confía en los mensajes
-7. **Los comandos de análisis ahorran tiempo** → No reinventes la rueda
+1. **Cuatro proveedores soportados** → OpenAI, Google Gen AI, Ollama, HuggingFace
+2. **La CLI es tu navaja suiza** → Un comando para cada necesidad
+3. **Dry run es tu mejor amigo** → Nunca gastes dinero sin probar
+4. **Timeouts por proveedor** → OpenAI (1min), Google (2min), HF (3min), Ollama (5min)
+5. **El verbose mode es para debugging** → Úsalo cuando algo falle
+6. **Los logs son oro** → Siempre especifica --log-to-file
+7. **El dashboard visualiza todo** → Para análisis complejos
+8. **La validación automática previene errores** → Confía en los mensajes
+9. **Los comandos de análisis ahorran tiempo** → No reinventes la rueda
 
 ### 🚀 Comando de Ayuda Universal
 

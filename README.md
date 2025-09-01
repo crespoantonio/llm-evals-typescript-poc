@@ -307,6 +307,12 @@ npx ts-node src/cli.ts hf/google/flan-t5-large math-basic
 npx ts-node src/cli.ts hf/microsoft/DialoGPT-large toxicity
 npx ts-node src/cli.ts hf/codellama/CodeLlama-7b-Instruct-hf sql-basic
 npx ts-node src/cli.ts hf/distilgpt2 math-basic  # Lightweight for testing
+
+# Google Gen AI Models (official @google/genai library, requires GEMINI_API_KEY)
+npx ts-node src/cli.ts gemini-2.0-flash-001 math-basic
+npx ts-node src/cli.ts gemini-1.5-pro sql-graded
+npx ts-node src/cli.ts google/gemini-2.0-flash-001 toxicity
+npx ts-node src/cli.ts genai/gemini-1.5-pro math-basic
 ```
 
 ### **Advanced CLI Commands**

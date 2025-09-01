@@ -58,13 +58,14 @@ Al completar esta guía, podrás:
 ---
 
 #### [🤖 03. Cliente LLM](./03-cliente-llm.md)
-🕐 **Tiempo:** 25 minutos  
+🕐 **Tiempo:** 30 minutos  
 🎯 **Objetivo:** Conectarte con diferentes modelos de IA  
 **Lo que aprenderás:**
-- Cómo conectarse a OpenAI, Ollama, Hugging Face
-- Diferencias entre proveedores
-- Manejo de errores y timeouts
-- Estimación de costos
+- Cómo conectarse a OpenAI, Ollama, HuggingFace, y Google Gen AI
+- Diferencias entre proveedores y sus peculiaridades
+- Manejo de errores y timeouts específicos
+- Estimación de costos por proveedor
+- Conversión automática de system messages (Google)
 
 **🎯 Ejercicio práctico:** Configurar tu primera conexión con un modelo de IA.
 
@@ -249,6 +250,8 @@ Enfoque en: Templates educativos, métricas pedagógicas, dashboard
 
 ### 🔗 Enlaces Útiles
 - [OpenAI API Documentation](https://platform.openai.com/docs)
+- [Google AI Studio](https://aistudio.google.com/app/apikey) - Para API keys de Gemini
+- [HuggingFace Inference API](https://huggingface.co/docs/api-inference)
 - [Ollama Documentation](https://ollama.ai/docs)  
 - [Redis Quick Start](https://redis.io/docs/getting-started/)
 - [JSONL Format Specification](https://jsonlines.org/)
@@ -260,10 +263,11 @@ Enfoque en: Templates educativos, métricas pedagógicas, dashboard
 - **Docker**: Para deployments consistentes
 
 ### 📖 Conceptos de Background
-- **LLMs (Large Language Models)**: GPT, Claude, Llama, etc.
+- **LLMs (Large Language Models)**: GPT, Claude, Gemini, Llama, etc.
 - **Tokens**: Unidades de texto que procesan los modelos
 - **Embeddings**: Representaciones numéricas de significado
 - **Cosine Similarity**: Método para comparar similitud semántica
+- **System Instructions**: Instrucciones de comportamiento para el modelo (Google uses systemInstruction)
 
 ---
 

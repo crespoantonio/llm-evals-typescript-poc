@@ -13,6 +13,7 @@ import {
   InferenceClientHubApiError,
   InferenceClientProviderOutputError
 } from '@huggingface/inference';
+import { GoogleGenAI } from '@google/genai';
 import { ChatMessage, CompletionOptions, CompletionResult, LLMClient } from './types';
 
 /**
@@ -450,6 +451,166 @@ export class HuggingFaceClient implements LLMClient {
 }
 
 /**
+ * Google Gen AI client implementation using the official @google/genai library
+ */
+export class GoogleGenAIClient implements LLMClient {
+  private client: GoogleGenAI;
+  private model: string;
+  private timeout: number;
+
+  constructor(model: string = 'gemini-2.0-flash-001', apiKey?: string, timeout: number = 120000) {
+    this.model = model.replace('google/', '').replace('gemini/', '').replace('genai/', ''); // Remove provider prefixes if present
+    this.timeout = timeout; // Default 2 minutes for Google Gen AI
+    
+    // Get API key with better error handling
+    const finalApiKey = apiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!finalApiKey) {
+      throw new Error(
+        'GEMINI_API_KEY is required but not found. Please:\n' +
+        '1. Create a .env file in your project root\n' +
+        '2. Add: GEMINI_API_KEY=your-actual-api-key\n' +
+        '3. Get your API key from: https://aistudio.google.com/app/apikey\n' +
+        '4. Ensure .env file is saved as UTF-8 encoding'
+      );
+    }
+
+    if (finalApiKey === 'your_gemini_api_key_here' || finalApiKey === 'your_api_key_here') {
+      throw new Error(
+        'GEMINI_API_KEY is still a placeholder. Please:\n' +
+        '1. Get your real API key from: https://aistudio.google.com/app/apikey\n' +
+        '2. Replace the placeholder in your .env file\n' +
+        '3. Format: GEMINI_API_KEY=your-actual-key-here'
+      );
+    }
+    
+    // Initialize Google Gen AI client
+    this.client = new GoogleGenAI({ 
+      apiKey: finalApiKey,
+    });
+  }
+
+  async complete(messages: ChatMessage[], options?: CompletionOptions): Promise<CompletionResult> {
+    try {
+      // Separate system messages from conversation messages
+      // Google Gen AI uses systemInstruction in config, not as content with 'system' role
+      const systemMessages = messages.filter(msg => msg.role === 'system');
+      const conversationMessages = messages.filter(msg => msg.role !== 'system');
+
+      // Combine system messages into a single system instruction
+      const systemInstruction = systemMessages.length > 0 
+        ? systemMessages.map(msg => msg.content).join('\n\n')
+        : undefined;
+
+      // Convert conversation messages to Google Gen AI format
+      // Only 'user' and 'model' roles are supported in contents
+      const contents = conversationMessages.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : msg.role, // Google uses 'model' instead of 'assistant'
+        parts: [{ text: msg.content }],
+      }));
+
+      // Create timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error(`Google Gen AI request timed out after ${this.timeout/1000}s`)), this.timeout)
+      );
+
+      // Configure generation parameters
+      const generateParams: any = {
+        model: this.model,
+        contents: contents,
+        config: {
+          generationConfig: {
+            temperature: options?.temperature ?? 0.0,
+            maxOutputTokens: options?.max_tokens,
+            topP: options?.top_p,
+            stopSequences: options?.stop ? (Array.isArray(options.stop) ? options.stop : [options.stop]) : undefined,
+          },
+        },
+      };
+
+      // Add system instruction if we have system messages
+      if (systemInstruction) {
+        generateParams.config.systemInstruction = systemInstruction;
+      }
+
+      // Execute generation request with timeout
+      const generatePromise = this.client.models.generateContent(generateParams);
+      const response = await Promise.race([generatePromise, timeoutPromise]);
+
+      // Extract text content from response
+      const content = response.text;
+      if (!content || content.trim().length === 0) {
+        throw new Error('Empty response from Google Gen AI');
+      }
+
+      // Extract usage information if available
+      const usage = response.usageMetadata ? {
+        prompt_tokens: response.usageMetadata.promptTokenCount || 0,
+        completion_tokens: response.usageMetadata.candidatesTokenCount || 0,
+        total_tokens: response.usageMetadata.totalTokenCount || 0,
+      } : undefined;
+
+      // Extract finish reason from the first candidate
+      const finishReason = response.candidates?.[0]?.finishReason?.toLowerCase() || 'stop';
+
+      return {
+        content: content.trim(),
+        usage,
+        model: this.model,
+        finish_reason: finishReason,
+      };
+    } catch (error) {
+      // Handle timeout errors
+      if (error instanceof Error && error.message.includes('timed out')) {
+        throw new Error(`Google Gen AI request timed out after ${this.timeout/1000}s. Try increasing timeout or check network connection.`);
+      }
+      
+      // Handle authentication errors
+      if (error instanceof Error && (
+        error.message.includes('API_KEY_INVALID') || 
+        error.message.includes('authentication') ||
+        error.message.includes('401') ||
+        error.message.includes('Unauthorized')
+      )) {
+        throw new Error(`Google Gen AI authentication failed. Check your GEMINI_API_KEY environment variable.`);
+      }
+      
+      // Handle rate limiting
+      if (error instanceof Error && (
+        error.message.includes('429') || 
+        error.message.includes('rate limit') ||
+        error.message.includes('quota')
+      )) {
+        throw new Error(`Google Gen AI rate limit exceeded. Please wait and try again.`);
+      }
+      
+      // Handle model not found errors
+      if (error instanceof Error && (
+        error.message.includes('404') || 
+        error.message.includes('model not found') ||
+        error.message.includes('Model not supported')
+      )) {
+        throw new Error(`Google Gen AI model '${this.model}' not found. Check model name and availability.`);
+      }
+      
+      // Handle network/connection errors
+      if (error instanceof Error && (
+        error.message.includes('fetch') || 
+        error.message.includes('network') ||
+        error.message.includes('ECONNREFUSED')
+      )) {
+        throw new Error(`Failed to connect to Google Gen AI API. Check your internet connection.`);
+      }
+      
+      throw new Error(`Google Gen AI completion failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  getModel(): string {
+    return this.model;
+  }
+}
+
+/**
  * Factory function to create LLM clients with proper timeout configuration
  */
 export function createLLMClient(model: string, timeout?: number): LLMClient {
@@ -467,6 +628,11 @@ export function createLLMClient(model: string, timeout?: number): LLMClient {
   if (model.startsWith('hf/') || model.includes('huggingface.co')) {
     const hfTimeout = timeout || 120000; // 2 minutes for HuggingFace
     return new HuggingFaceClient(model, undefined, undefined, hfTimeout);
+  }
+  
+  if (model.startsWith('google/') || model.startsWith('gemini') || model.startsWith('genai/') || model.includes('gemini')) {
+    const googleTimeout = timeout || 120000; // 2 minutes for Google Gen AI
+    return new GoogleGenAIClient(model, undefined, googleTimeout);
   }
   
   // Add more providers here as needed

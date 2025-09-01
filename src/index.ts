@@ -14,7 +14,7 @@ export { Registry } from './registry';
 export { Logger } from './logger';
 
 // LLM clients
-export { createLLMClient, OpenAIClient } from './llm-client';
+export { createLLMClient, OpenAIClient, OllamaClient, HuggingFaceClient, GoogleGenAIClient } from './llm-client';
 
 // Dataset utilities
 export { loadDataset, saveDataset, createSampleDataset } from './dataset-loader';
