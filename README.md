@@ -33,6 +33,10 @@ npm install
 
 # Build the project
 npm run build
+
+# Optional: Install CLI globally for easier usage
+npm install -g .
+# Now you can use 'llm-eval' instead of 'npx ts-node src/cli.ts'
 ```
 
 ### API Keys Setup
@@ -76,16 +80,17 @@ npm install redis
 
 ### Basic Evaluation
 ```bash
-# 1. Initialize registry with sample configurations
-npx ts-node src/cli.ts init
-
-# 2. Set your OpenAI API key
+# Option A: Using global CLI with npm link (recommended)
+npm run build && npm link
+llm-eval init
 export OPENAI_API_KEY="your-api-key-here"
+llm-eval list
+llm-eval gpt-4 math-basic --max-samples 5
 
-# 3. List available evaluations
+# Option B: Direct execution (no installation needed)
+npx ts-node src/cli.ts init
+export OPENAI_API_KEY="your-api-key-here"
 npx ts-node src/cli.ts list
-
-# 4. Run your first evaluation
 npx ts-node src/cli.ts gpt-4 math-basic --max-samples 5
 
 # Output:
@@ -94,10 +99,11 @@ npx ts-node src/cli.ts gpt-4 math-basic --max-samples 5
 # ⏳ Progress: 5/5 (100%)
 # 🎯 Final Score: 80.0%
 
-# 5. Try different model providers
-npx ts-node src/cli.ts ollama/llama3.1 math-basic --max-samples 3          # Local models (free)
-npx ts-node src/cli.ts hf/meta-llama/Llama-3.2-3B-Instruct math-basic --max-samples 3 # HuggingFace models (official @huggingface/inference)
-npx ts-node src/cli.ts gpt-4 math-basic --max-samples 3                  # OpenAI models
+# 5. Try different model providers (using global CLI)
+llm-eval ollama/llama3.1 math-basic --max-samples 3                    # Local models (free)
+llm-eval hf/meta-llama/Llama-3.2-3B-Instruct math-basic --max-samples 3 # HuggingFace models
+llm-eval gemini-2.0-flash-001 math-basic --max-samples 3               # Google Gen AI models
+llm-eval gpt-4 math-basic --max-samples 3                              # OpenAI models
 ```
 
 ### Production Features Quick Start

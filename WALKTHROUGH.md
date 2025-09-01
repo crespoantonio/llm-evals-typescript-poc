@@ -32,6 +32,11 @@ git clone https://github.com/crespoantonio/llm-evals-typescript-poc
 cd llm-evals-typescript-poc
 npm install
 npm run build
+
+# Optional: Install CLI globally with npm link (recommended)
+npm link
+# Now you can use 'llm-eval' instead of 'npx ts-node src/cli.ts'
+# Benefits: No global dependencies, instant updates, easy uninstall
 ```
 
 ### Step 1.2: Environment Setup
@@ -48,9 +53,17 @@ cp env.example .env
 ### Step 1.3: Initialize Sample Data
 ```bash
 # Create registry with examples
+# If you used 'npm link' above:
+llm-eval init
+
+# Otherwise use direct execution:
 npx ts-node src/cli.ts init
 
 # Verify setup worked
+# With npm link:
+llm-eval list
+
+# With direct execution:
 npx ts-node src/cli.ts list
 ```
 

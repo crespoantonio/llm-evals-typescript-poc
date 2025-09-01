@@ -16,6 +16,106 @@ La **CLI** (Command Line Interface) es como una **varita mágica** que te permit
 - **📊 Análisis instantáneo** → Comandos para estadísticas y reportes
 - **🤖 Automatizable** → Perfecta para scripts y CI/CD
 
+## 🛠️ Instalación y Configuración del CLI
+
+### 🔗 Opción 1: Comando Global con `npm link` (Recomendado)
+
+**La mejor opción para desarrollo** - NO instala dependencias globalmente:
+
+```bash
+# 1. Compilar el proyecto
+npm run build
+
+# 2. Crear enlace simbólico (symlink) - ¡MUY superior a npm install -g!
+npm link
+
+# 3. ¡Ya puedes usar llm-eval desde cualquier lugar!
+llm-eval --help
+llm-eval gpt-4 math-basic
+llm-eval list
+
+# Para desinstalar limpiamente
+npm unlink -g llm-evals-ts
+```
+
+**¿Por qué `npm link` es mejor que `npm install -g`?**
+- ✅ **NO instala dependencias globalmente** 
+- ✅ Crea un **enlace simbólico** al proyecto local
+- ✅ Los **cambios se reflejan inmediatamente** sin reinstalar
+- ✅ Usa las dependencias ya instaladas en `node_modules/`
+- ✅ **Práctica estándar** para desarrollo de CLIs
+
+### ⚡ Opción 2: Script de Desarrollo (Para cambios frecuentes)
+
+Si estás desarrollando o modificando el framework:
+
+```bash
+# Usar el script npm dev
+npm run dev -- gpt-4 math-basic
+npm run dev -- --help
+npm run dev -- list
+```
+
+### 🔧 Opción 3: Uso Directo con ts-node
+
+Para uso ocasional sin instalación global:
+
+```bash
+# Ejecutar directamente desde el código fuente
+npx ts-node src/cli.ts gpt-4 math-basic
+npx ts-node src/cli.ts --help
+npx ts-node src/cli.ts list
+```
+
+### 📦 Opción 4: Instalación Global Completa (No recomendada)
+
+⚠️ **Solo si `npm link` no funciona en tu sistema:**
+
+```bash
+# Instala todo globalmente (incluyendo dependencias)
+npm run build
+npm install -g .
+
+# Para desinstalar
+npm uninstall -g llm-evals-ts
+```
+
+**Desventajas:** Instala todas las dependencias globalmente, ocupa más espacio.
+
+### ⚠️ Troubleshooting
+
+Si `llm-eval` no funciona después de usar `npm link`:
+
+```bash
+# 1. Desenlazar y volver a enlazar
+npm unlink -g llm-evals-ts
+npm run build
+npm link
+
+# 2. Verificar instalación
+llm-eval --version
+which llm-eval  # Debe apuntar a tu directorio del proyecto
+
+# 3. Si sigue fallando, usar npm run dev como alternativa
+npm run dev -- --help
+
+# 4. Verificar que package.json tiene el campo "bin" correcto
+cat package.json | grep -A2 '"bin"'
+```
+
+### 🎯 Verificar que Todo Funciona
+
+```bash
+# 1. Inicializar registry (si no existe)
+llm-eval init
+
+# 2. Listar evaluaciones disponibles
+llm-eval list
+
+# 3. Ejecutar prueba sin gastar dinero
+llm-eval gpt-3.5-turbo math-basic --dry-run --max-samples 3
+```
+
 ## 🧙‍♂️ Los Hechizos Principales
 
 ### 1. ⚡ Comando Principal - Ejecutar Evaluaciones
